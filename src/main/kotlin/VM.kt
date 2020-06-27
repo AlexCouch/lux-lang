@@ -12,6 +12,7 @@ sealed class VMObject{
         object VMUnit: VMValue(){
             override fun toString(): String = "Unit"
         }
+        data class VMReference(val variable: VMVariable): VMValue()
     }
 }
 
@@ -41,9 +42,17 @@ class VM(val moduleName: String){
 
     val currentFrame get() = stack.reversed().find { it is VMObject.VMFrame } as? VMObject.VMFrame
 
-    fun findVariable(name: String): VMObject.VMVariable? = stack.find {
-        it is VMObject.VMVariable && it.ident == name
-    } as? VMObject.VMVariable
+    fun findReference(name: String): VMObject.VMValue.VMReference? =
+        (heap.find {
+            it is VMObject.VMVariable && it.ident == name
+        } as? VMObject.VMVariable)?.let {
+            VMObject.VMValue.VMReference(it)
+        }
+
+    fun findLocal(name: String): VMObject? =
+        stack.find {
+            it is VMObject.VMVariable && it.ident == name
+        } as? VMObject.VMVariable
 
     fun evalBinaryExpr(expr: Node.StatementNode.ExpressionNode.BinaryNode): VMObject.VMValue =
         when(expr){
@@ -99,11 +108,13 @@ class VM(val moduleName: String){
                 VMObject.VMValue.VMInteger(expr.int)
             }
             is Node.StatementNode.ExpressionNode.ReferenceNode -> {
-                val found = findVariable(expr.refIdent.str)
-                if (found is VMObject.VMVariable) {
-                    found.value
-                } else {
-                    throw RuntimeException("Identifier ${expr.refIdent} is not a valid variable symbol")
+                when(val found = findLocal(expr.refIdent.str)){
+                    is VMObject.VMVariable -> found.value
+                    is VMObject.VMValue.VMReference -> found.variable.value
+                    else -> {
+                        val ref = findReference(expr.refIdent.str)
+                        ref?.variable?.value ?: throw IllegalStateException("Could not find variable with name ${expr.refIdent.str}")
+                    }
                 }
             }
             is Node.StatementNode.ExpressionNode.BinaryNode -> evalBinaryExpr(expr)
@@ -143,6 +154,10 @@ class VM(val moduleName: String){
     fun evalStatement(stmt: Node.StatementNode){
         when(stmt){
             is Node.StatementNode.VarNode -> {
+                val value = evalExpr(stmt.expression)
+                heap += VMObject.VMVariable(stmt.identifier.str, value)
+            }
+            is Node.StatementNode.LetNode -> {
                 val value = evalExpr(stmt.expression)
                 stack += VMObject.VMVariable(stmt.identifier.str, value)
             }

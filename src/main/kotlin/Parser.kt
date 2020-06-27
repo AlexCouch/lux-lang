@@ -1,6 +1,6 @@
 import kotlin.concurrent.thread
 
-class Parser{
+class Parser(val ident: String){
     fun parsePrint(token: Token, stream: TokenStream): Node.StatementNode.PrintNode{
         val expr = parseExpression(stream)
         return Node.StatementNode.PrintNode(expr, token.pos)
@@ -168,6 +168,6 @@ class Parser{
         while(stream.hasNext()){
             statements.add(parseStatement(stream))
         }
-        return Node.ModuleNode(statements)
+        return Node.ModuleNode(Node.IdentifierNode(this.ident, TokenPos.default), statements)
     }
 }

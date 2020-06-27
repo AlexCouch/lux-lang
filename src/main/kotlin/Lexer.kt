@@ -64,7 +64,7 @@ class Lexer(input: String){
                     val startPos = currentPos
                     val buf = buildString {
                         append(c)
-                        scan@ while(scanner.hasNext()){
+                        scan@ while(true){
                             val next = advance() ?: break@scan
                             when{
                                 next.isLetterOrDigit() -> append(next)
@@ -79,10 +79,10 @@ class Lexer(input: String){
                     val startPos = currentPos
                     val buf = buildString {
                         append(c)
-                        scan@ while(scanner.hasNext()){
-                            val next = advance()
+                        scan@ while(true){
+                            val next = advance() ?: break@scan
                             when{
-                                next?.isDigit() == true -> append(next)
+                                next.isDigit() -> append(next)
                                 else -> break@scan
                             }
                         }

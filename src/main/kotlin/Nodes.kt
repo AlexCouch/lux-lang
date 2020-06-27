@@ -1,9 +1,8 @@
-import javax.swing.plaf.nimbus.State
 
 sealed class Node(open val pos: TokenPos){
     internal var parent: Node? = null
 
-    data class ModuleNode(val statements: ArrayList<StatementNode>): Node(TokenPos.default){
+    data class ModuleNode(val ident: IdentifierNode, val statements: ArrayList<StatementNode>): Node(TokenPos.default){
         override fun assignParents() {
             for(statement in this.statements){
                 statement.parent = this
@@ -19,6 +18,11 @@ sealed class Node(open val pos: TokenPos){
                 }
             }
             append("}")
+        }
+
+        override fun walkChildren(block: (Node) -> Unit) {
+            block(ident)
+            statements.forEach(block)
         }
     }
     data class IdentifierNode(val str: String, override val pos: TokenPos): Node(pos){
@@ -50,6 +54,11 @@ sealed class Node(open val pos: TokenPos){
                 }
                 append("}")
             }
+
+            override fun walkChildren(block: (Node) -> Unit) {
+                block(identifier)
+                block(expression)
+            }
         }
         data class LetNode(val identifier: IdentifierNode, val expression: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
             override fun assignParents() {
@@ -66,6 +75,11 @@ sealed class Node(open val pos: TokenPos){
                     appendWithNewLine("expression: $expression")
                 }
                 append("}")
+            }
+
+            override fun walkChildren(block: (Node) -> Unit) {
+                block(identifier)
+                block(expression)
             }
         }
         data class ConstNode(val identifier: IdentifierNode, val expression: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
@@ -84,6 +98,11 @@ sealed class Node(open val pos: TokenPos){
                 }
                 append("}")
             }
+
+            override fun walkChildren(block: (Node) -> Unit) {
+                block(identifier)
+                block(expression)
+            }
         }
         data class PrintNode(val expr: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
             override fun assignParents() {
@@ -97,6 +116,10 @@ sealed class Node(open val pos: TokenPos){
                     appendWithNewLine("expr: $expr")
                 }
                 append("}")
+            }
+
+            override fun walkChildren(block: (Node) -> Unit) {
+                block(expr)
             }
         }
         data class ReassignmentNode(val ident: IdentifierNode, val expr: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
@@ -114,7 +137,13 @@ sealed class Node(open val pos: TokenPos){
                 }
                 append("}")
             }
+
+            override fun walkChildren(block: (Node) -> Unit) {
+                block(ident)
+                block(expr)
+            }
         }
+
         sealed class ExpressionNode(override val pos: TokenPos): StatementNode(pos){
             data class IntegerLiteralNode(val int: Int, override val pos: TokenPos): ExpressionNode(pos){
                 override fun assignParents() {}
@@ -139,6 +168,11 @@ sealed class Node(open val pos: TokenPos){
                     }
                     append("}")
                 }
+
+                override fun walkChildren(block: (Node) -> Unit) {
+                    block(refIdent)
+                }
+
             }
             data class ProcCallNode(val refIdent: IdentifierNode, val arguments: List<ExpressionNode>, override val pos: TokenPos): ExpressionNode(pos){
                 override fun assignParents() {}
@@ -158,6 +192,39 @@ sealed class Node(open val pos: TokenPos){
                     }
                     append("}")
                 }
+
+                override fun walkChildren(block: (Node) -> Unit) {
+                    block(refIdent)
+                    arguments.forEach(block)
+                }
+            }
+
+            data class BlockNode(val stmts: List<StatementNode>, override val pos: TokenPos): StatementNode(pos) {
+                override fun assignParents() {
+                    stmts.forEach {
+                        it.parent = this
+                        it.assignParents()
+                    }
+                }
+
+                override fun toString(): String = buildPrettyString{
+                    appendWithNewLine("AnonBlock{")
+                    indent {
+                        appendWithNewLine("pos: $pos")
+                        appendWithNewLine("body: [")
+                        indent {
+                            stmts.forEach {
+                                appendWithNewLine("$it")
+                            }
+                        }
+                        appendWithNewLine("]")
+                    }
+                    append("}")
+                }
+
+                override fun walkChildren(block: (Node) -> Unit) {
+                    stmts.forEach(block)
+                }
             }
             sealed class BinaryNode(open val left: ExpressionNode, open val right: ExpressionNode, override val pos: TokenPos): ExpressionNode(pos){
                 override fun assignParents() {
@@ -171,6 +238,11 @@ sealed class Node(open val pos: TokenPos){
                 override fun toString(): String = buildPrettyString{
                     appendWithNewLine("left: $left,")
                     appendWithNewLine("right: $right")
+                }
+
+                override fun walkChildren(block: (Node) -> Unit) {
+                    block(left)
+                    block(right)
                 }
                 data class BinaryAddNode(override val left: ExpressionNode, override val right: ExpressionNode, override val pos: TokenPos): BinaryNode(left, right, pos){
                     override fun toString(): String = buildPrettyString{
@@ -241,6 +313,12 @@ sealed class Node(open val pos: TokenPos){
                 }
                 append("}")
             }
+
+            override fun walkChildren(block: (Node) -> Unit) {
+                block(ident)
+                params.forEach(block)
+                body.forEach(block)
+            }
         }
 
         data class ProcParamNode(val ident: IdentifierNode, override val pos: TokenPos): Node(pos) {
@@ -256,6 +334,10 @@ sealed class Node(open val pos: TokenPos){
                 }
                 append("}")
             }
+
+            override fun walkChildren(block: (Node) -> Unit) {
+                block(ident)
+            }
         }
     }
 
@@ -266,6 +348,30 @@ sealed class Node(open val pos: TokenPos){
             block(this.parent!!)
             this.parent!!.walkParents(block)
         }
+    }
+
+    fun findNode(predicate: (Node) -> Boolean): Node?{
+        var found: Node? = null
+        walkParents { parent ->
+            parent.walkChildren { child ->
+                if(predicate(child)){
+                    found = child
+                }
+            }
+        }
+        return found
+    }
+
+    open fun walkChildren(block: (Node) -> Unit){}
+
+    fun first(predicate: (Node) -> Boolean): Node?{
+        var found: Node? = null
+        walkChildren{
+            if(predicate(it)){
+                found = it
+            }
+        }
+        return found
     }
 }
 

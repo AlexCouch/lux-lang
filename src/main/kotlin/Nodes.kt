@@ -199,7 +199,7 @@ sealed class Node(open val pos: TokenPos){
                 }
             }
 
-            data class BlockNode(val stmts: List<StatementNode>, override val pos: TokenPos): StatementNode(pos) {
+            data class BlockNode(val stmts: List<StatementNode>, override val pos: TokenPos): ExpressionNode(pos) {
                 override fun assignParents() {
                     stmts.forEach {
                         it.parent = this
@@ -321,7 +321,7 @@ sealed class Node(open val pos: TokenPos){
             }
         }
 
-        data class ProcParamNode(val ident: IdentifierNode, override val pos: TokenPos): Node(pos) {
+        data class ProcParamNode(val ident: IdentifierNode, override val pos: TokenPos): StatementNode(pos) {
             override fun assignParents() {
                 ident.parent = this
             }

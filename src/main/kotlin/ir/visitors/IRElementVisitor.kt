@@ -22,5 +22,6 @@ interface IRElementVisitor<R, D> {
     fun visitPrint(element: IRPrint, data: D): R = visitStatement(element, data)
     fun visitLet(element: IRLet, data: D): R = visitStatement(element, data)
     fun visitProc(element: IRProc, data: D): R = visitStatement(element, data)
+    fun visitProcParam(element: IRProcParam, data: D): R = visitStatement(element, data)
     fun visitProcCall(element: IRProcCall, data: D): R = visitExpression(element, data)
 }

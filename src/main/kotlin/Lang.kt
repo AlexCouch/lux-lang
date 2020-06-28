@@ -1,3 +1,5 @@
+import passes.symbolResolution.SymbolResolutionPass
+import passes.symbolResolution.SymbolTable
 import java.io.File
 
 sealed class Either<out T>{
@@ -27,7 +29,8 @@ fun main(args: Array<String>){
 //    println(moduleAST)
 //    val vm = VM(file.nameWithoutExtension)
 //    vm.start(moduleAST)
-    val astLowering = ASTLowering()
-    val ir = astLowering.visitModule(moduleAST)
+    val symbolTable = SymbolTable()
+    val astLowering = SymbolResolutionPass()
+    val ir = astLowering.visitModule(moduleAST, symbolTable)
     println(ir)
 }

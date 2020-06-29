@@ -1,3 +1,4 @@
+import passes.SSATransformation
 import passes.symbolResolution.SymbolResolutionPass
 import passes.symbolResolution.SymbolTable
 import java.io.File
@@ -32,5 +33,8 @@ fun main(args: Array<String>){
     val symbolTable = SymbolTable()
     val astLowering = SymbolResolutionPass()
     val ir = astLowering.visitModule(moduleAST, symbolTable)
-    println(ir)
+    val ssaTransformer = SSATransformation()
+    val ssaSymbolTable = SymbolTable()
+    val ssaIR = ssaTransformer.visitModule(ir, ssaSymbolTable)
+    println(ssaIR)
 }

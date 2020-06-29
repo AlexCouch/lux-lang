@@ -3,6 +3,7 @@ package ir.declarations.expressions
 import buildPrettyString
 import ir.visitors.IRElementVisitor
 import ir.declarations.IRExpression
+import ir.declarations.IRStatementContainer
 import ir.symbol.IRRefSymbol
 import ir.symbol.IRSymbol
 import ir.symbol.IRSymbolOwner
@@ -12,7 +13,8 @@ import ir.visitors.IRElementTransformer
 class IRRef(
     val refName: String,
     override val type: IRType,
-    override val symbol: IRRefSymbol
+    override val symbol: IRRefSymbol,
+    override var parent: IRStatementContainer?
 ) : IRExpression, IRSymbolOwner{
     init{
         symbol.bind(this)

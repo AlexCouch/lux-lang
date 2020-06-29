@@ -14,6 +14,7 @@ interface IRElementVisitor<R, D> {
     fun <T> visitConstant(element: IRConstant<T>, data: D): R = visitExpression(element, data)
     fun visitVar(element: IRVar, data: D): R = visitStatement(element, data)
     fun visitMutation(element: IRMutation, data: D): R = visitStatement(element, data)
+    fun visitBinary(element: IRBinary, data: D): R = visitExpression(element, data)
     fun visitBinaryPlus(element: IRBinaryPlus, data: D): R = visitExpression(element, data)
     fun visitBinaryMinus(element: IRBinaryMinus, data: D): R = visitExpression(element, data)
     fun visitBinaryMult(element: IRBinaryMult, data: D): R = visitExpression(element, data)

@@ -3,6 +3,7 @@ package ir.declarations.expressions
 import buildPrettyString
 import ir.visitors.IRElementVisitor
 import ir.declarations.IRExpression
+import ir.declarations.IRStatementContainer
 import ir.types.IRType
 import ir.visitors.IRElementTransformer
 
@@ -27,7 +28,8 @@ enum class IRBinaryKind{
 class IRBinaryPlus(
     override val left: IRExpression,
     override val right: IRExpression,
-    override val type: IRType
+    override val type: IRType,
+    override var parent: IRStatementContainer?
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.PLUS
     override val precendence: Int = 2
@@ -44,7 +46,8 @@ class IRBinaryPlus(
 class IRBinaryMinus(
     override val left: IRExpression,
     override val right: IRExpression,
-    override val type: IRType
+    override val type: IRType,
+    override var parent: IRStatementContainer?
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.MINUS
     override val precendence: Int = 2
@@ -61,7 +64,8 @@ class IRBinaryMinus(
 class IRBinaryMult(
     override val left: IRExpression,
     override val right: IRExpression,
-    override val type: IRType
+    override val type: IRType,
+    override var parent: IRStatementContainer?
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.MULT
     override val precendence: Int = 1
@@ -78,7 +82,8 @@ class IRBinaryMult(
 class IRBinaryDiv(
     override val left: IRExpression,
     override val right: IRExpression,
-    override val type: IRType
+    override val type: IRType,
+    override var parent: IRStatementContainer?
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.DIV
     override val precendence: Int = 1

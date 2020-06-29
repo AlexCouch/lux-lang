@@ -1,13 +1,14 @@
 package ir.types
 
 import buildPrettyString
+import ir.builtin.BuiltinTypes
 import ir.symbol.IRSymbol
 
 interface TypeMarker
 
 interface IRType : TypeMarker{
     companion object{
-        val default = IRSimpleType("Unresolved")
+        val default = BuiltinTypes.DYNAMIC.makeSimpleType()
     }
 }
 interface IRSimpleTypeMarker: TypeMarker

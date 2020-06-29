@@ -2,6 +2,7 @@ package ir.declarations.expressions
 
 import buildPrettyString
 import ir.declarations.IRExpression
+import ir.declarations.IRStatementContainer
 import ir.symbol.IRProcCallSymbol
 import ir.symbol.IRSymbol
 import ir.symbol.IRSymbolOwner
@@ -13,7 +14,8 @@ class IRProcCall(
     val name: String,
     val arguments: ArrayList<IRExpression> = arrayListOf(),
     override val type: IRType = IRType.default,
-    override val symbol: IRProcCallSymbol
+    override val symbol: IRProcCallSymbol,
+    override var parent: IRStatementContainer?
 ) : IRExpression, IRSymbolOwner{
 
     init{

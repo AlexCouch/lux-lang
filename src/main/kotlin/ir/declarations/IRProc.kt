@@ -46,9 +46,9 @@ class IRProc(
         }
 }
 
-sealed class IRProcParam(val name: String): IRStatement{
-    class IRUntypedProcParam(name: String): IRProcParam(name)
-    class IRTypedProcParam(name: String, val type: IRType): IRProcParam(name)
+sealed class IRProcParam(val name: String, override var parent: IRStatementContainer?): IRStatement{
+    class IRUntypedProcParam(name: String, override var parent: IRStatementContainer?): IRProcParam(name, parent)
+    class IRTypedProcParam(name: String, val type: IRType, override var parent: IRStatementContainer?): IRProcParam(name, parent)
 
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitProcParam(this, data)

@@ -4,9 +4,7 @@ age = age + 1
 print age
 
 def x(a, b, c):
-    let sum = a
-    sum = sum + b
-    sum = sum + c
+    let sum = a + b + c
     print a
     print b
     print c

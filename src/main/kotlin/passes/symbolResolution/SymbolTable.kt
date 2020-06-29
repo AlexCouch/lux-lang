@@ -245,7 +245,7 @@ class SymbolTable{
         name: String,
         type: IRType,
         expression: IRExpression,
-        parent: IRStatementContainer,
+        parent: IRStatementContainer?,
         variableFactory: (IRConstSymbol) -> IRConst = {
             IRConst(name, type, expression, parent, it)
         }
@@ -269,11 +269,11 @@ class SymbolTable{
 
     fun findProc(name: String) = procSymbolTable[name]
 
-    fun declareReference(name: String) = refSymbolTable.declare(name, { IRRefSymbol() }, { IRRef(name, IRType.default, it) })
+    fun declareReference(name: String, parent: IRStatementContainer?) = refSymbolTable.declare(name, { IRRefSymbol() }, { IRRef(name, IRType.default, it, parent) })
 
     fun findReference(name: String) = refSymbolTable[name]
 
-    fun declareProcCall(name: String, arguments: ArrayList<IRExpression>) =
+    fun declareProcCall(name: String, arguments: ArrayList<IRExpression>, parent: IRStatementContainer?) =
         procCallSymbolTable.declare(name, {
             IRProcCallSymbol()
         }, {
@@ -281,7 +281,8 @@ class SymbolTable{
                 name,
                 arguments,
                 IRType.default,
-                it
+                it,
+                parent
             )
         })
 

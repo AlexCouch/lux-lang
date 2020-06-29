@@ -1,3 +1,7 @@
 package ir
 
-interface IRStatement : IRElement
+import ir.declarations.IRStatementContainer
+
+interface IRStatement : IRElement{
+    var parent: IRStatementContainer?
+}

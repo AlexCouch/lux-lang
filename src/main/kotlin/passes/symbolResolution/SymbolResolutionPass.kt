@@ -68,7 +68,7 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
     }
 
     override fun visitProcParam(procParamNode: Node.StatementNode.ProcParamNode, parent: IRStatementContainer, data: SymbolTable): IRProcParam =
-        IRProcParam.IRUntypedProcParam(procParamNode.ident.str)
+        IRProcParam.IRUntypedProcParam(procParamNode.ident.str, parent)
 
     override fun visitPrint(print: Node.StatementNode.PrintNode, parent: IRStatementContainer, data: SymbolTable): IRPrint =
         IRPrint(visitExpression(print.expr, parent, data), parent)
@@ -103,25 +103,25 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
         }
 
     override fun visitProcCall(procCallNode: Node.StatementNode.ExpressionNode.ProcCallNode, parent: IRStatementContainer, data: SymbolTable): IRExpression =
-        data.declareProcCall(procCallNode.refIdent.str, procCallNode.arguments.map { visitExpression(it, parent, data) }.toMutableList() as ArrayList<IRExpression>)
+        data.declareProcCall(procCallNode.refIdent.str, procCallNode.arguments.map { visitExpression(it, parent, data) }.toMutableList() as ArrayList<IRExpression>, parent)
 
     override fun visitRef(refNode: Node.StatementNode.ExpressionNode.ReferenceNode, parent: IRStatementContainer, data: SymbolTable): IRRef =
-        data.declareReference(refNode.refIdent.str)
+        data.declareReference(refNode.refIdent.str, parent)
 
     override fun visitBinary(binaryNode: Node.StatementNode.ExpressionNode.BinaryNode, parent: IRStatementContainer, data: SymbolTable): IRBinary{
         val left = visitExpression(binaryNode.left, parent, data)
         val right = visitExpression(binaryNode.right, parent, data)
 
         return when(binaryNode){
-            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryAddNode -> IRBinaryPlus(left, right, left.type)
-            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryMinusNode -> IRBinaryMinus(left, right, left.type)
-            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryMultNode -> IRBinaryMult(left, right, left.type)
-            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryDivNode -> IRBinaryDiv(left, right, left.type)
+            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryAddNode -> IRBinaryPlus(left, right, left.type, parent)
+            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryMinusNode -> IRBinaryMinus(left, right, left.type, parent)
+            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryMultNode -> IRBinaryMult(left, right, left.type, parent)
+            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryDivNode -> IRBinaryDiv(left, right, left.type, parent)
         }
     }
 
     override fun visitIntegerLiteral(intLiteral: Node.StatementNode.ExpressionNode.IntegerLiteralNode, parent: IRStatementContainer, data: SymbolTable): IRConstant<Int> =
-        IRConstant.integer(intLiteral.int)
+        IRConstant.integer(intLiteral.int, parent)
 
     override fun visitBlock(
         blockNode: Node.StatementNode.ExpressionNode.BlockNode,

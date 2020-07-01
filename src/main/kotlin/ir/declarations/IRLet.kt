@@ -28,7 +28,7 @@ class IRLet(override val name: String,
 
     override fun toString(): String =
         buildPrettyString{
-            append("let %$name = $expression")
+            append("$type let %$name = $expression")
         }
 
 }

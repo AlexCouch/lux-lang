@@ -27,7 +27,7 @@ class IRConst(override val name: String,
 
     override fun toString(): String =
         buildPrettyString {
-            append("const %$name = $expression")
+            append("$type const %$name = $expression")
         }
 
 }

@@ -5,7 +5,7 @@ class Lexer(input: String){
     private val Char.delimitingToken: Either<Token> get() = when(this){
         '=' -> Either.Some(Token.EqualToken(currentPos))
         '+' -> Either.Some(Token.PlusToken(currentPos))
-        '-' -> Either.Some(Token.MinusToken(currentPos))
+        '-' -> Either.Some(Token.HyphenToken(currentPos))
         '*' -> Either.Some(Token.StarToken(currentPos))
         '/' -> Either.Some(Token.FSlashToken(currentPos))
         ':' -> Either.Some(Token.ColonToken(currentPos))
@@ -16,6 +16,8 @@ class Lexer(input: String){
         ']' -> Either.Some(Token.RBracketToken(currentPos))
         '{' -> Either.Some(Token.LCurlyToken(currentPos))
         '}' -> Either.Some(Token.RCurlyToken(currentPos))
+        '>' -> Either.Some(Token.RAngleToken(currentPos))
+        '<' -> Either.Some(Token.LAngleToken(currentPos))
         else -> Either.None
     }
 

@@ -7,6 +7,7 @@ import ir.IRStatement
 import ir.declarations.*
 import ir.declarations.expressions.*
 import ir.symbol.IRConstSymbol
+import ir.types.IRSimpleType
 import ir.types.IRType
 
 class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTable>{
@@ -17,13 +18,13 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             irModule.statements += visitStatement(it, irModule, data)
         }
         data.forEachReference {
-            val refIdent = it.owner.refName
+            val refIdent = it.owner?.refName!!
             assert(data.hasVariable(refIdent)){
                 "$refIdent is not a valid variable symbol"
             }
         }
         data.forEachMutation {
-            val mutIdent = it.owner.name
+            val mutIdent = it.owner!!.name
             assert(data.hasVariable(mutIdent)){
                 "$mutIdent is not a valid variable symbol"
             }
@@ -33,7 +34,7 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             }
         }
         data.forEachProcCall {
-            val procIdent = it.owner.name
+            val procIdent = it.owner!!.name
             assert(data.findProc(procIdent) != null){
                 "$procIdent is not a valid procedure symbol"
             }
@@ -51,15 +52,25 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             is Node.StatementNode.DefProcNode -> visitProc(statement, parent, data)
             is Node.StatementNode.LetNode -> visitLet(statement, parent, data)
             is Node.StatementNode.ExpressionNode.ProcCallNode -> visitProcCall(statement, parent, data)
+            is Node.StatementNode.ReturnNode -> visitReturn(statement, parent, data)
             else -> TODO("Working on it")
         }
 
+    override fun visitReturn(
+        ret: Node.StatementNode.ReturnNode,
+        parent: IRStatementContainer,
+        data: SymbolTable
+    ): IRReturn {
+        val expr = visitExpression(ret.expr, parent, data)
+        return IRReturn(expr, parent)
+    }
+
     override fun visitProc(procNode: Node.StatementNode.DefProcNode, parent: IRStatementContainer, data: SymbolTable): IRProc{
-        val irProc = data.declareProc(procNode.ident.str, IRType.default, parent)
+        val irProc = data.declareProc(procNode.ident.str, IRSimpleType(procNode.returnType.str), parent)
         data.enterScope(irProc)
-        irProc.params.addAll(procNode.params.map {
+        procNode.params.forEach {
             visitProcParam(it, irProc, data)
-        })
+        }
         irProc.statements.addAll(procNode.body.map {
             visitStatement(it, irProc, data)
         })
@@ -68,24 +79,24 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
     }
 
     override fun visitProcParam(procParamNode: Node.StatementNode.ProcParamNode, parent: IRStatementContainer, data: SymbolTable): IRProcParam =
-        IRProcParam.IRUntypedProcParam(procParamNode.ident.str, parent)
+        data.declareProcParam(parent.name, procParamNode.ident.str, IRSimpleType(procParamNode.type.str))
 
     override fun visitPrint(print: Node.StatementNode.PrintNode, parent: IRStatementContainer, data: SymbolTable): IRPrint =
         IRPrint(visitExpression(print.expr, parent, data), parent)
 
     override fun visitConst(constNode: Node.StatementNode.ConstNode, parent: IRStatementContainer, data: SymbolTable): IRConst{
         val expr = visitExpression(constNode.expression, parent, data)
-        return data.declareConst(constNode.identifier.str, expr.type, expr, parent)
+        return data.declareConst(constNode.identifier.str, IRSimpleType(constNode.type.str), expr, parent)
     }
 
     override fun visitLet(let: Node.StatementNode.LetNode, parent: IRStatementContainer, data: SymbolTable): IRLet{
         val expr = visitExpression(let.expression, parent, data)
-        return data.declareLet(let.identifier.str, expr.type, expr, parent)
+        return data.declareLet(let.identifier.str, IRSimpleType(let.type.str), expr, parent)
     }
 
     override fun visitVar(varNode: Node.StatementNode.VarNode, parent: IRStatementContainer, data: SymbolTable): IRVar{
         val expr = visitExpression(varNode.expression, parent, data)
-        return data.declareVariable(varNode.identifier.str, expr.type, expr, parent)
+        return data.declareVariable(varNode.identifier.str, IRSimpleType(varNode.type.str), expr, parent)
     }
 
     override fun visitMutation(mutationNode: Node.StatementNode.ReassignmentNode, parent: IRStatementContainer, data: SymbolTable): IRMutation{

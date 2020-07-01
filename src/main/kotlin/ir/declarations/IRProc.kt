@@ -3,9 +3,7 @@ package ir.declarations
 import buildPrettyString
 import ir.IRStatement
 import ir.builtin.BuiltinTypes
-import ir.symbol.IRProcSymbol
-import ir.symbol.IRSymbol
-import ir.symbol.IRSymbolOwner
+import ir.symbol.*
 import ir.types.IRType
 import ir.visitors.IRElementTransformer
 import ir.visitors.IRElementVisitor
@@ -33,7 +31,7 @@ class IRProc(
             appendWithNewLine("")
             append("$returnType proc %$name(")
             params.forEachIndexed { i, it ->
-                append("${if(it is IRProcParam.IRTypedProcParam) "${it.type} " else ""}%${it.name}")
+                append("${it.type} %${it.name}")
                 if(i < params.size - 1) append(", ")
             }
             appendWithNewLine(") do")
@@ -46,9 +44,19 @@ class IRProc(
         }
 }
 
-sealed class IRProcParam(val name: String, override var parent: IRStatementContainer?): IRStatement{
-    class IRUntypedProcParam(name: String, override var parent: IRStatementContainer?): IRProcParam(name, parent)
-    class IRTypedProcParam(name: String, val type: IRType, override var parent: IRStatementContainer?): IRProcParam(name, parent)
+class IRProcParam(
+    val name: String,
+    override var parent: IRStatementContainer?,
+    val type: IRType = IRType.default,
+    override val symbol: IRProcParamSymbol
+):
+    IRStatement,
+    IRSymbolOwner,
+    IRBindableSymbolBase<IRProcParam>() {
+
+    init{
+        symbol.bind(this)
+    }
 
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitProcParam(this, data)

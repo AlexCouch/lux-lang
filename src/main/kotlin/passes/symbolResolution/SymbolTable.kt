@@ -200,6 +200,7 @@ class SymbolTable{
     private val letSymbolTable = ScopedOverridingSymbolTable<IRLet, IRLetSymbol>()
     private val constSymbolTable = ScopedOverridingSymbolTable<IRConst, IRConstSymbol>()
     private val procSymbolTable = SpecializedSymbolTable<IRProc, IRProcSymbol>()
+    private val procParamSymbolTable = SpecializedSymbolTable<IRProcParam, IRProcParamSymbol>()
     private val refSymbolTable = ScopedOverridingSymbolTable<IRRef, IRRefSymbol>()
     private val procCallSymbolTable = ScopedOverridingSymbolTable<IRProcCall, IRProcCallSymbol>()
     private val mutationSymbolTable = ScopedOverridingSymbolTable<IRMutation, IRMutationSymbol>()
@@ -256,7 +257,8 @@ class SymbolTable{
     fun findVariable(name: String) =
         varSymbolTable[name] ?:
         letSymbolTable[name] ?:
-        constSymbolTable[name]
+        constSymbolTable[name] ?:
+        procParamSymbolTable[name]
 
     fun declareProc(
         name: String,
@@ -268,6 +270,17 @@ class SymbolTable{
     ) = procSymbolTable.declare(name, { IRProcSymbol() },  procFactory)
 
     fun findProc(name: String) = procSymbolTable[name]
+
+    fun declareProcParam(
+        procName: String,
+        paramName: String,
+        type: IRType = IRType.default
+    ): IRProcParam {
+        val proc = findProc(procName) ?: throw IllegalArgumentException("Could not find procedure with symbol $procName")
+        val param = procParamSymbolTable.declare(paramName, { IRProcParamSymbol() }, {IRProcParam(paramName, proc.owner, type, it)})
+        proc.owner?.params?.add(param)
+        return param
+    }
 
     fun declareReference(name: String, parent: IRStatementContainer?) = refSymbolTable.declare(name, { IRRefSymbol() }, { IRRef(name, IRType.default, it, parent) })
 

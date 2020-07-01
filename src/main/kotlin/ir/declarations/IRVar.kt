@@ -27,7 +27,7 @@ class IRVar(
 
     override fun toString(): String =
         buildPrettyString {
-            append("var %$name = $expression")
+            append("$type var %$name = $expression")
         }
 
 }

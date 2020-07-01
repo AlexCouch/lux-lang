@@ -2,7 +2,7 @@ sealed class Token(open val pos: TokenPos){
     data class IdentifierToken(val lexeme: String, override val pos: TokenPos): Token(pos)
     data class EqualToken(override val pos: TokenPos): Token(pos)
     data class PlusToken(override val pos: TokenPos): Token(pos)
-    data class MinusToken(override val pos: TokenPos): Token(pos)
+    data class HyphenToken(override val pos: TokenPos): Token(pos)
     data class StarToken(override val pos: TokenPos): Token(pos)
     data class FSlashToken(override val pos: TokenPos): Token(pos)
     data class LParenToken(override val pos: TokenPos): Token(pos)
@@ -11,6 +11,8 @@ sealed class Token(open val pos: TokenPos){
     data class RBracketToken(override val pos: TokenPos): Token(pos)
     data class LCurlyToken(override val pos: TokenPos): Token(pos)
     data class RCurlyToken(override val pos: TokenPos): Token(pos)
+    data class LAngleToken(override val pos: TokenPos): Token(pos)
+    data class RAngleToken(override val pos: TokenPos): Token(pos)
     data class CommaToken(override val pos: TokenPos): Token(pos)
     data class ColonToken(override val pos: TokenPos): Token(pos)
 

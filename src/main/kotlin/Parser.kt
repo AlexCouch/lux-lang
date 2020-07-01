@@ -1,3 +1,5 @@
+import ir.types.IRType
+
 interface ASTVisitor<P, R, D>{
     fun visitModule(module: Node.ModuleNode, data: D): R
     fun visitStatement(statement: Node.StatementNode, parent: P, data: D): R
@@ -14,6 +16,7 @@ interface ASTVisitor<P, R, D>{
     fun visitRef(refNode: Node.StatementNode.ExpressionNode.ReferenceNode, parent: P, data: D): R = visitExpression(refNode, parent, data)
     fun visitMutation(mutationNode: Node.StatementNode.ReassignmentNode, parent: P, data: D): R = visitStatement(mutationNode, parent, data)
     fun visitPrint(print: Node.StatementNode.PrintNode, parent: P, data: D): R = visitStatement(print, parent, data)
+    fun visitReturn(ret: Node.StatementNode.ReturnNode, parent: P, data: D): R = visitStatement(ret, parent, data)
 }
 
 class Parser(val ident: String){
@@ -29,7 +32,7 @@ class Parser(val ident: String){
                 val right = parseExpression(stream)
                 Node.StatementNode.ExpressionNode.BinaryNode.BinaryAddNode(startExpression, right, peek.pos)
             }
-            is Token.MinusToken -> {
+            is Token.HyphenToken -> {
                 stream.next()
                 val right = parseExpression(stream)
                 Node.StatementNode.ExpressionNode.BinaryNode.BinaryMinusNode(startExpression, right, peek.pos)
@@ -78,13 +81,39 @@ class Parser(val ident: String){
             if(next !is Token.IdentifierToken){
                 throw RuntimeException("Expect an identifier but instead got $ident")
             }
-            params.add(Node.StatementNode.ProcParamNode(Node.IdentifierNode(next.lexeme, next.pos), next.pos))
+            val paramident = next
+            val type = if(stream.peek is Token.ColonToken){
+                stream.next()
+                val tyident = stream.next()
+                if(tyident !is Token.IdentifierToken){
+                    throw IllegalArgumentException("Expected an identifier but instead found $ident")
+                }else{
+                    Node.IdentifierNode(tyident.lexeme, tyident.pos)
+                }
+            }else{
+                Node.IdentifierNode("dyn", TokenPos.default)
+            }
+            params.add(Node.StatementNode.ProcParamNode(Node.IdentifierNode(paramident.lexeme, next.pos), type, next.pos))
             next = stream.next()
             if(next !is Token.CommaToken){
                 if(next !is Token.RParenToken) {
                     throw RuntimeException("Expect a ',' or ')' but instead got $ident")
                 }
             }
+        }
+        next = stream.next()
+        val returnType = if(next is Token.HyphenToken){
+            next = stream.next()
+            if(next !is Token.RAngleToken){
+                throw IllegalArgumentException("Expected '>' but instead got $next")
+            }
+            next = stream.next()
+            if(next !is Token.IdentifierToken){
+                throw IllegalArgumentException("Expected an identifier, but instead got $next")
+            }
+            Node.IdentifierNode(next.lexeme, next.pos)
+        }else{
+            Node.IdentifierNode("dyn", TokenPos.default)
         }
         next = stream.next()
         if(next !is Token.ColonToken){
@@ -96,7 +125,7 @@ class Parser(val ident: String){
             val statement = parseStatement(stream)
             body += statement
         }
-        return Node.StatementNode.DefProcNode(Node.IdentifierNode(ident.lexeme, ident.pos), params, body, token.pos)
+        return Node.StatementNode.DefProcNode(Node.IdentifierNode(ident.lexeme, ident.pos), params, body, returnType, token.pos)
     }
 
     fun parseAssignment(stream: TokenStream): Node.StatementNode.ExpressionNode{
@@ -112,8 +141,17 @@ class Parser(val ident: String){
         if(ident !is Token.IdentifierToken){
             throw RuntimeException("Expect an identifier but instead got $ident")
         }
+        val typeAnnot = if(stream.peek is Token.ColonToken){
+            val typeident = stream.next()
+            if(typeident !is Token.IdentifierToken){
+                throw IllegalArgumentException("Expected an identifier but instead got $typeident")
+            }
+            Node.IdentifierNode(typeident.lexeme, typeident.pos)
+        }else{
+            Node.IdentifierNode("dyn", TokenPos.default)
+        }
         val expr = parseAssignment(stream)
-        return Node.StatementNode.VarNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, token.pos)
+        return Node.StatementNode.VarNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, typeAnnot, token.pos)
     }
 
     fun parseLet(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.LetNode{
@@ -121,8 +159,17 @@ class Parser(val ident: String){
         if(ident !is Token.IdentifierToken){
             throw RuntimeException("Expect an identifier but instead got $ident")
         }
+        val typeAnnot = if(stream.peek is Token.ColonToken){
+            val typeident = stream.next()
+            if(typeident !is Token.IdentifierToken){
+                throw IllegalArgumentException("Expected an identifier but instead got $typeident")
+            }
+            Node.IdentifierNode(typeident.lexeme, typeident.pos)
+        }else{
+            Node.IdentifierNode("dyn", TokenPos.default)
+        }
         val expr = parseAssignment(stream)
-        return Node.StatementNode.LetNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, token.pos)
+        return Node.StatementNode.LetNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, typeAnnot, token.pos)
     }
 
     fun parseConst(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.ConstNode{
@@ -130,8 +177,17 @@ class Parser(val ident: String){
         if(ident !is Token.IdentifierToken){
             throw RuntimeException("Expect an identifier but instead got $ident")
         }
+        val typeAnnot = if(stream.peek is Token.ColonToken){
+            val typeident = stream.next()
+            if(typeident !is Token.IdentifierToken){
+                throw IllegalArgumentException("Expected an identifier but instead got $typeident")
+            }
+            Node.IdentifierNode(typeident.lexeme, typeident.pos)
+        }else{
+            Node.IdentifierNode("dyn", TokenPos.default)
+        }
         val expr = parseAssignment(stream)
-        return Node.StatementNode.ConstNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, token.pos)
+        return Node.StatementNode.ConstNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, typeAnnot, token.pos)
     }
 
     fun parseReassignment(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.ReassignmentNode{
@@ -158,6 +214,11 @@ class Parser(val ident: String){
         return Node.StatementNode.ExpressionNode.ProcCallNode(token.toIdentifierNode(), args, token.pos)
     }
 
+    fun parseReturn(token: Token, stream: TokenStream): Node.StatementNode.ReturnNode{
+        val expr = parseExpression(stream)
+        return Node.StatementNode.ReturnNode(expr, token.pos)
+    }
+
     fun parseStatement(stream: TokenStream): Node.StatementNode{
         return when(val next = stream.next()){
             is Token.IdentifierToken -> {
@@ -167,6 +228,7 @@ class Parser(val ident: String){
                     "const" -> parseConst(next, stream)
                     "def" -> parseProc(next, stream)
                     "print" -> parsePrint(next, stream)
+                    "return" -> parseReturn(next, stream)
                     else -> {
                         when(val peek = stream.peek){
                             is Token.EqualToken -> parseReassignment(next, stream)

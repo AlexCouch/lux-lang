@@ -38,7 +38,7 @@ sealed class Node(open val pos: TokenPos){
         }
     }
     sealed class StatementNode(override val pos: TokenPos): Node(pos){
-        data class VarNode(val identifier: IdentifierNode, val expression: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
+        data class VarNode(val identifier: IdentifierNode, val expression: ExpressionNode, val type: IdentifierNode, override val pos: TokenPos): StatementNode(pos){
             override fun assignParents() {
                 identifier.parent = this
                 expression.parent = this
@@ -50,6 +50,7 @@ sealed class Node(open val pos: TokenPos){
                 indent {
                     appendWithNewLine("pos: $pos")
                     appendWithNewLine("ident: $identifier")
+                    appendWithNewLine("type: $type")
                     appendWithNewLine("expression: $expression")
                 }
                 append("}")
@@ -60,7 +61,7 @@ sealed class Node(open val pos: TokenPos){
                 block(expression)
             }
         }
-        data class LetNode(val identifier: IdentifierNode, val expression: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
+        data class LetNode(val identifier: IdentifierNode, val expression: ExpressionNode, val type: IdentifierNode, override val pos: TokenPos): StatementNode(pos){
             override fun assignParents() {
                 identifier.parent = this
                 expression.parent = this
@@ -72,6 +73,7 @@ sealed class Node(open val pos: TokenPos){
                 indent {
                     appendWithNewLine("pos: $pos")
                     appendWithNewLine("ident: $identifier")
+                    appendWithNewLine("type: $type")
                     appendWithNewLine("expression: $expression")
                 }
                 append("}")
@@ -82,7 +84,12 @@ sealed class Node(open val pos: TokenPos){
                 block(expression)
             }
         }
-        data class ConstNode(val identifier: IdentifierNode, val expression: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
+        data class ConstNode(
+            val identifier: IdentifierNode,
+            val expression: ExpressionNode,
+            val type: IdentifierNode,
+            override val pos: TokenPos
+        ): StatementNode(pos){
             override fun assignParents() {
                 identifier.parent = this
                 expression.parent = this
@@ -94,6 +101,7 @@ sealed class Node(open val pos: TokenPos){
                 indent {
                     appendWithNewLine("pos: $pos")
                     appendWithNewLine("ident: $identifier")
+                    appendWithNewLine("type: $type")
                     appendWithNewLine("expression: $expression")
                 }
                 append("}")
@@ -142,6 +150,22 @@ sealed class Node(open val pos: TokenPos){
                 block(ident)
                 block(expr)
             }
+        }
+
+        data class ReturnNode(val expr: ExpressionNode, override val pos: TokenPos): StatementNode(pos) {
+            override fun assignParents() {
+                expr.parent = this
+                expr.assignParents()
+            }
+
+            override fun toString(): String =
+                buildPrettyString {
+                    appendWithNewLine("Return{")
+                    indent {
+                        appendWithNewLine("expr: $expr")
+                        appendWithNewLine("pos: $pos")
+                    }
+                }
         }
 
         sealed class ExpressionNode(override val pos: TokenPos): StatementNode(pos){
@@ -282,7 +306,14 @@ sealed class Node(open val pos: TokenPos){
                 }
             }
         }
-        data class DefProcNode(val ident: IdentifierNode, val params: ArrayList<ProcParamNode>, val body: ArrayList<StatementNode>, override val pos: TokenPos): StatementNode(pos) {
+        data class DefProcNode(
+            val ident: IdentifierNode,
+            val params: ArrayList<ProcParamNode>,
+            val body: ArrayList<StatementNode>,
+            val returnType: IdentifierNode,
+            override val pos: TokenPos
+        ): StatementNode(pos) {
+
             override fun assignParents() {
                 ident.parent = this
                 params.forEach {
@@ -321,7 +352,7 @@ sealed class Node(open val pos: TokenPos){
             }
         }
 
-        data class ProcParamNode(val ident: IdentifierNode, override val pos: TokenPos): StatementNode(pos) {
+        data class ProcParamNode(val ident: IdentifierNode, val type: IdentifierNode, override val pos: TokenPos): StatementNode(pos) {
             override fun assignParents() {
                 ident.parent = this
             }

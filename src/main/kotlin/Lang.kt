@@ -1,6 +1,7 @@
 import passes.SSATransformation
 import passes.symbolResolution.SymbolResolutionPass
 import passes.symbolResolution.SymbolTable
+import passes.typecheck.TypeCheckingPass
 import java.io.File
 
 sealed class Either<out T>{
@@ -33,8 +34,10 @@ fun main(args: Array<String>){
     val symbolTable = SymbolTable()
     val astLowering = SymbolResolutionPass()
     val ir = astLowering.visitModule(moduleAST, symbolTable)
+    val typeck = TypeCheckingPass()
+    val typeCheckedModule = typeck.visitModule(ir, symbolTable)
     val ssaTransformer = SSATransformation()
     val ssaSymbolTable = SymbolTable()
-    val ssaIR = ssaTransformer.visitModule(ir, ssaSymbolTable)
+    val ssaIR = ssaTransformer.visitModule(typeCheckedModule, ssaSymbolTable)
     println(ssaIR)
 }

@@ -3,11 +3,9 @@ print age
 age = age + 1
 print age
 
-def x(a, b, c):
-    let sum = a + b + c
-    print a
-    print b
-    print c
-    print sum
+def x(a: int, b: int, c: int) -> int:
+    let sum = a * b / c
+    const x = 10
+    return x
 
-x(5, 3, 6)
+print x(5, 3, 6)

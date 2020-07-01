@@ -5,7 +5,7 @@ import ir.declarations.expressions.IRProcCall
 import ir.declarations.expressions.IRRef
 
 interface IRSymbol{
-    val owner: IRSymbolOwner
+    val owner: IRSymbolOwner?
     val isBound: Boolean
 }
 
@@ -13,28 +13,26 @@ interface IRSymbolOwner{
     val symbol: IRSymbol
 }
 
-interface IRBindableSymbol<S: IRSymbolOwner>: IRSymbol{
-    override val owner: S
+abstract class IRBindableSymbol<S: IRSymbolOwner>: IRSymbol{
+    abstract override var owner: S?
+        protected set
 
-    fun bind(owner: S)
+    abstract fun bind(owner: S)
 }
 
-abstract class IRBindableSymbolBase<S: IRSymbolOwner>: IRBindableSymbol<S>{
-    private var _owner: S? = null
-    override val owner: S get() = _owner ?: throw IllegalStateException("Symbol with ${javaClass.simpleName} is unbound")
+abstract class IRBindableSymbolBase<S: IRSymbolOwner>: IRBindableSymbol<S>(){
+    override var owner: S? = null
+        get() = field ?: throw IllegalStateException("Symbol with ${javaClass.simpleName} is unbound")
 
-    override val isBound: Boolean get() = _owner != null
+    override val isBound: Boolean get() = owner != null
 
     override fun bind(owner: S) {
-        if(_owner == null){
-            _owner = owner
-        }else{
-            throw IllegalStateException("${javaClass.simpleName} is already bound: $owner")
-        }
+        this.owner = owner
     }
 }
 
 class IRProcSymbol: IRBindableSymbolBase<IRProc>()
+class IRProcParamSymbol: IRBindableSymbolBase<IRProcParam>()
 
 abstract class IRVarSymbolBase<S: IRVarDeclaration<*>> : IRBindableSymbolBase<S>()
 

@@ -1,14 +1,14 @@
-%a = HeapAlloc(4)
-%b = HeapAlloc(4)
-%c = HeapAlloc(4)
-%d = HeapAlloc(4)
+%a = halloc(4)
+%b = halloc(4)
+%c = halloc(4)
+%d = halloc(4)
 
-store %a, i32 5
-store %b, i32 3
-store %c, i32 6
+store %a, int 5
+store %b, int 3
+store %c, int 6
 
-%0 = pow %a, i32 2
-%1 = pow %b, i32 2
-%2 = pow %c, i32 2
+%0 = pow %a, int 2
+%1 = pow %b, int 2
+%2 = pow %c, int 2
 %3 = add %0, %1
 store %d, add %2, %3

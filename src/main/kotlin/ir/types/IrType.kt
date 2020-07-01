@@ -20,6 +20,13 @@ class IRSimpleType(val symbol: String) : IRType, IRSimpleTypeMarker{
         buildPrettyString{
             append(symbol)
         }
+
+    override fun equals(other: Any?): Boolean =
+        this.symbol == (other as? IRSimpleType)?.symbol
+
+    override fun hashCode(): Int {
+        return symbol.hashCode()
+    }
 }
 
 interface IRDynamicType : IRType, IRDynamicTypeMarker

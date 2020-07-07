@@ -1,4 +1,10 @@
+import arrow.core.*
+import arrow.core.Either
+import errors.ErrorHandling
+import errors.SourceAnnotation
+import errors.buildSourceAnnotation
 import ir.types.IRType
+import kotlin.reflect.typeOf
 
 interface ASTVisitor<P, R, D>{
     fun visitModule(module: Node.ModuleNode, data: D): R
@@ -19,233 +25,875 @@ interface ASTVisitor<P, R, D>{
     fun visitReturn(ret: Node.StatementNode.ReturnNode, parent: P, data: D): R = visitStatement(ret, parent, data)
 }
 
-class Parser(val ident: String){
-    fun parsePrint(token: Token, stream: TokenStream): Node.StatementNode.PrintNode{
+class Parser(val ident: String, val errorHandler: ErrorHandling){
+
+    fun parsePrint(token: Token, stream: TokenStream): Either<Node.StatementNode.PrintNode, SourceAnnotation>{
         val expr = parseExpression(stream)
-        return Node.StatementNode.PrintNode(expr, token.pos)
+        return when(expr){
+            is Either.Left -> Node.StatementNode.PrintNode(expr.a, token.startPos, token.endPos).left()
+            is Either.Right -> expr.b.right()
+        }
     }
 
-    fun tryParseBinary(startExpression: Node.StatementNode.ExpressionNode, stream: TokenStream): Node.StatementNode.ExpressionNode.BinaryNode? {
+    fun tryParseBinary(startExpression: Node.StatementNode.ExpressionNode, stream: TokenStream): Option<Node.StatementNode.ExpressionNode.BinaryNode> {
         return when (val peek = stream.peek) {
-            is Token.PlusToken -> {
-                stream.next()
-                val right = parseExpression(stream)
-                Node.StatementNode.ExpressionNode.BinaryNode.BinaryAddNode(startExpression, right, peek.pos)
+            is Some -> when (val p = peek.t) {
+                is Token.PlusToken -> {
+                    stream.next()
+                    val right = when (val right = parseExpression(stream)) {
+                        is Either.Left -> right.a
+                        is Either.Right -> return none()
+                    }
+                    Node.StatementNode.ExpressionNode.BinaryNode.BinaryAddNode(startExpression, right, p.startPos, p.endPos)
+                        .some()
+                }
+                is Token.HyphenToken -> {
+                    stream.next()
+                    val right = when (val right = parseExpression(stream)) {
+                        is Either.Left -> right.a
+                        is Either.Right -> return none()
+                    }
+                    Node.StatementNode.ExpressionNode.BinaryNode.BinaryMinusNode(startExpression, right, p.startPos, p.endPos)
+                        .some()
+                }
+                is Token.StarToken -> {
+                    stream.next()
+                    val right = when (val right = parseExpression(stream)) {
+                        is Either.Left -> right.a
+                        is Either.Right -> return none()
+                    }
+                    Node.StatementNode.ExpressionNode.BinaryNode.BinaryMultNode(startExpression, right, p.startPos, p.endPos)
+                        .some()
+                }
+                is Token.FSlashToken -> {
+                    stream.next()
+                    val right = when (val right = parseExpression(stream)) {
+                        is Either.Left -> right.a
+                        is Either.Right -> return none()
+                    }
+                    Node.StatementNode.ExpressionNode.BinaryNode.BinaryDivNode(startExpression, right, p.startPos, p.endPos)
+                        .some()
+                }
+                else -> none()
             }
-            is Token.HyphenToken -> {
-                stream.next()
-                val right = parseExpression(stream)
-                Node.StatementNode.ExpressionNode.BinaryNode.BinaryMinusNode(startExpression, right, peek.pos)
-            }
-            is Token.StarToken -> {
-                stream.next()
-                val right = parseExpression(stream)
-                Node.StatementNode.ExpressionNode.BinaryNode.BinaryMultNode(startExpression, right, peek.pos)
-            }
-            is Token.FSlashToken -> {
-                stream.next()
-                val right = parseExpression(stream)
-                Node.StatementNode.ExpressionNode.BinaryNode.BinaryDivNode(startExpression, right, peek.pos)
-            }
-            else -> null
+            is None -> none()
         }
     }
 
-    fun parseExpression(stream: TokenStream): Node.StatementNode.ExpressionNode =
+    fun parseExpression(stream: TokenStream): Either<Node.StatementNode.ExpressionNode, SourceAnnotation> =
         when (val next = stream.next()) {
-            is Token.IntegerLiteralToken -> {
-                val int = Node.StatementNode.ExpressionNode.IntegerLiteralNode(next.literal, next.pos)
-                tryParseBinary(int, stream) ?: int
+            is Some -> {
+                when(val n = next.t){
+                    is Token.IntegerLiteralToken -> {
+                        val int = Node.StatementNode.ExpressionNode.IntegerLiteralNode(n.literal, n.startPos, n.endPos)
+                        val result = tryParseBinary(int, stream)
+                        if(result is Some){
+                            result.t.left()
+                        }else{
+                            int.left()
+                        }
+                    }
+                    is Token.IdentifierToken -> {
+                        val ref = Node.StatementNode.ExpressionNode.ReferenceNode(n.toIdentifierNode(), n.startPos, n.endPos)
+                        val result = tryParseBinary(ref, stream) or tryParseProcCall(n, stream)
+                        if(result is Some){
+                            result.t.left()
+                        }else{
+                            ref.left()
+                        }
+                    }
+                    else -> buildSourceAnnotation {
+                        message = "Unidentified expression: ${next.t}"
+                        sourceOrigin {
+                            source = stream.input
+                            start = next.t.startPos
+                            end = next.t.endPos
+                        }
+                        errorLine {
+                            start = next.t.startPos
+                            end = next.t.endPos
+                        }
+                    }.right()
+                }
             }
-            is Token.IdentifierToken -> {
-                val ref = Node.StatementNode.ExpressionNode.ReferenceNode(next.toIdentifierNode(), next.pos)
-                tryParseBinary(ref, stream)
-                    ?: tryParseProcCall(next, stream)
-                    ?: ref
-            }
-            else -> throw IllegalStateException("Unidentified expression: $next")
+            is None -> buildSourceAnnotation {
+                message = "Reach the end of token stream. This is a bug in the compiler. This should only happen in developer mode"
+                sourceOrigin {
+                    source = stream.input
+                }
+            }.right()
         }
 
-    fun parseProc(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.DefProcNode{
+    fun parseProc(token: Token.IdentifierToken, stream: TokenStream): Either<Node.StatementNode.DefProcNode, SourceAnnotation>{
         val ident = stream.next()
-        if(ident !is Token.IdentifierToken){
-            throw RuntimeException("Expect an identifier but instead got $ident")
+        if(ident is Some){
+            if(ident.t !is Token.IdentifierToken){
+                return buildSourceAnnotation {
+                    message = "Expect an identifier but instead got ${ident.t}"
+                }.right()
+            }
+        }else{
+            return buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
         }
         var next = stream.next()
-        if(next !is Token.LParenToken){
-            throw RuntimeException("Expect '(' but instead got $next")
+        if(next is Some){
+            if(next.t !is Token.LParenToken){
+                return buildSourceAnnotation {
+                    message = "Expect '(' but instead got ${(next as Some).t}"
+                    errorLine {
+                        start = token.startPos
+                        end = token.endPos
+                    }
+                    sourceOrigin {
+                        start = token.startPos
+                        end = token.endPos
+                        source = stream.input
+                    }
+                }.right()
+            }
+        }else{
+            return buildSourceAnnotation {
+                message = "Expect '(' but instead got ${(next as Some).t}"
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
         }
         val params = arrayListOf<Node.StatementNode.ProcParamNode>()
-        while(next !is Token.RParenToken){
+        while(next is Some && next.t !is Token.RParenToken){
             next = stream.next()
-            if(next !is Token.IdentifierToken){
-                throw RuntimeException("Expect an identifier but instead got $ident")
+            if(next is Some){
+                if(next.t !is Token.IdentifierToken){
+                    return buildSourceAnnotation {
+                        message = "Expect an identifier but instead got ${(next as Some).t}"
+                        errorLine {
+                            start = token.startPos
+                            end = token.endPos
+                        }
+                        sourceOrigin {
+                            start = token.startPos
+                            end = token.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
             }
             val paramident = next
-            val type = if(stream.peek is Token.ColonToken){
-                stream.next()
-                val tyident = stream.next()
-                if(tyident !is Token.IdentifierToken){
-                    throw IllegalArgumentException("Expected an identifier but instead found $ident")
+            val type = if(stream.peek is Some){
+                val peek = stream.peek as Some
+                if(peek.t is Token.ColonToken){
+                    stream.next()
+                    val tyident = stream.next()
+                    if(tyident is Some){
+                        if(tyident.t !is Token.IdentifierToken){
+                            return buildSourceAnnotation {
+                                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                                errorLine {
+                                    start = token.startPos
+                                    end = token.endPos
+                                }
+                                sourceOrigin {
+                                    start = token.startPos
+                                    end = token.endPos
+                                    source = stream.input
+                                }
+                            }.right()
+                        }else{
+                            Node.IdentifierNode((tyident.t as Token.IdentifierToken).lexeme, tyident.t.startPos, tyident.t.endPos)
+                        }
+                    }else{
+                        return buildSourceAnnotation {
+                            message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                            errorLine {
+                                start = token.startPos
+                                end = token.endPos
+                            }
+                            sourceOrigin {
+                                start = token.startPos
+                                end = token.endPos
+                                source = stream.input
+                            }
+                        }.right()
+                    }
                 }else{
-                    Node.IdentifierNode(tyident.lexeme, tyident.pos)
+                    Node.IdentifierNode("dyn", TokenPos.default, TokenPos.default)
                 }
             }else{
-                Node.IdentifierNode("dyn", TokenPos.default)
+                return buildSourceAnnotation {
+                    message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                    errorLine {
+                        start = token.startPos
+                        end = token.endPos
+                    }
+                    sourceOrigin {
+                        start = token.startPos
+                        end = token.endPos
+                        source = stream.input
+                    }
+                }.right()
             }
-            params.add(Node.StatementNode.ProcParamNode(Node.IdentifierNode(paramident.lexeme, next.pos), type, next.pos))
+            when(paramident){
+                is Some -> {
+                    if(paramident.t is Token.IdentifierToken){
+                        val ident = paramident.t as Token.IdentifierToken
+                        params.add(
+                            Node.StatementNode.ProcParamNode(
+                                Node.IdentifierNode(
+                                    ident.lexeme,
+                                    ident.startPos,
+                                    ident.endPos
+                                ),
+                                type,
+                                ident.startPos,
+                                ident.endPos
+                            )
+                        )
+                    }
+                }
+                is None -> {
+                    return buildSourceAnnotation {
+                        message = "Unexpectedly reached end of token stream. This should only happen during development mode."
+                        errorLine {
+                            start = token.startPos
+                            end = token.endPos
+                        }
+                        sourceOrigin {
+                            start = token.startPos
+                            end = token.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
+            }
             next = stream.next()
-            if(next !is Token.CommaToken){
-                if(next !is Token.RParenToken) {
-                    throw RuntimeException("Expect a ',' or ')' but instead got $ident")
+            when(next){
+                is Some -> {
+                    if(next.t !is Token.CommaToken){
+                        if(next.t !is Token.RParenToken) {
+                            val t = next.t
+                            return buildSourceAnnotation {
+                                message = "Expect a ',' or ')' but instead got $t"
+                                errorLine {
+                                    start = t.startPos
+                                    end = t.endPos
+                                }
+                                sourceOrigin {
+                                    start = t.startPos
+                                    end = t.endPos
+                                    source = stream.input
+                                }
+                            }.right()
+                        }
+                    }
+                }
+                is None -> {
+                    return buildSourceAnnotation {
+                        message = "Unexpectedly reached end of token stream. This should only happen during development mode."
+                        errorLine {
+                            start = token.startPos
+                            end = token.endPos
+                        }
+                        sourceOrigin {
+                            start = token.startPos
+                            end = token.endPos
+                            source = stream.input
+                        }
+                    }.right()
                 }
             }
         }
         next = stream.next()
-        val returnType = if(next is Token.HyphenToken){
-            next = stream.next()
-            if(next !is Token.RAngleToken){
-                throw IllegalArgumentException("Expected '>' but instead got $next")
+        val returnType = if(next is Some){
+            if(next.t is Token.HyphenToken){
+                next = stream.next()
+                if(next is Some){
+                    if(next.t !is Token.RAngleToken){
+                        val t = next.t
+                        return buildSourceAnnotation {
+                            message = "Expect a '>' but instead got $t"
+                            errorLine {
+                                start = t.startPos
+                                end = t.endPos
+                            }
+                            sourceOrigin {
+                                start = t.startPos
+                                end = t.endPos
+                                source = stream.input
+                            }
+                        }.right()
+                    }
+                }
+                next = stream.next()
+                if(next is Some){
+                    if(next.t !is Token.IdentifierToken){
+                        val t = next.t
+                        return buildSourceAnnotation {
+                            message = "Expect an identifier but instead got $t"
+                            errorLine {
+                                start = t.startPos
+                                end = t.endPos
+                            }
+                            sourceOrigin {
+                                start = t.startPos
+                                end = t.endPos
+                                source = stream.input
+                            }
+                        }.right()
+                    }else{
+                        Node.IdentifierNode((next.t as Token.IdentifierToken).lexeme, next.t.startPos, next.t.endPos)
+                    }
+                }else{
+                    Node.IdentifierNode("dyn", TokenPos.default, TokenPos.default)
+                }
+            }else{
+                val t = next.t
+                return buildSourceAnnotation {
+                    message = "Expect a '-' but instead got $t"
+                    errorLine {
+                        start = t.startPos
+                        end = t.endPos
+                    }
+                    sourceOrigin {
+                        start = t.startPos
+                        end = t.endPos
+                        source = stream.input
+                    }
+                }.right()
             }
-            next = stream.next()
-            if(next !is Token.IdentifierToken){
-                throw IllegalArgumentException("Expected an identifier, but instead got $next")
-            }
-            Node.IdentifierNode(next.lexeme, next.pos)
         }else{
-            Node.IdentifierNode("dyn", TokenPos.default)
+            return buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen during development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
         }
         next = stream.next()
-        if(next !is Token.ColonToken){
-            throw RuntimeException("Expect a ':' but instead got $ident")
+        if(next is Some){
+            if(next.t !is Token.ColonToken){
+                val t = next.t
+                return buildSourceAnnotation {
+                    message = "Expect a ':' but instead got $t"
+                    errorLine {
+                        start = t.startPos
+                        end = t.endPos
+                    }
+                    sourceOrigin {
+                        start = t.startPos
+                        end = t.endPos
+                        source = stream.input
+                    }
+                }.right()
+            }
         }
 //        stream.next()
         val body = arrayListOf<Node.StatementNode>()
-        while(stream.hasNext() && stream.peek?.pos?.indentLevel!! > token.pos.indentLevel){
-            val statement = parseStatement(stream)
-            body += statement
+        if(stream.peek is Some){
+            while(stream.hasNext() && stream.peek is Some<Token> && (stream.peek as Some<Token>).t.startPos.indentLevel > token.startPos.indentLevel){
+                val statement = parseStatement(stream)
+                if(statement is Either.Left){
+                    body += statement.a
+                }else{
+                    return (statement as Either.Right).b.right()
+                }
+            }
         }
-        return Node.StatementNode.DefProcNode(Node.IdentifierNode(ident.lexeme, ident.pos), params, body, returnType, token.pos)
+        val t = ident.t as Token.IdentifierToken
+        return Node.StatementNode.DefProcNode(Node.IdentifierNode(t.lexeme, t.startPos, t.endPos), params, body, returnType, token.startPos, token.endPos).left()
     }
 
-    fun parseAssignment(stream: TokenStream): Node.StatementNode.ExpressionNode{
+    fun parseAssignment(stream: TokenStream): Either<Node.StatementNode.ExpressionNode, SourceAnnotation>{
         val next = stream.next()
-        if(next !is Token.EqualToken){
-            throw IllegalArgumentException("Expect '=' but instead got $next")
+        when(next){
+            is Some -> {
+                if(next.t !is Token.EqualToken){
+                    val t = next.t
+                    return buildSourceAnnotation {
+                        message = "Expect '=' but instead got $t"
+                        errorLine {
+                            start = t.startPos
+                            end = t.endPos
+                        }
+                        sourceOrigin {
+                            start = t.startPos
+                            end = t.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
+            }
+            is None -> buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen during development mode."
+            }
         }
         return parseExpression(stream)
     }
 
-    fun parseVar(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.VarNode{
+    fun parseVar(token: Token.IdentifierToken, stream: TokenStream): Either<Node.StatementNode.VarNode, SourceAnnotation> {
         val ident = stream.next()
-        if(ident !is Token.IdentifierToken){
-            throw RuntimeException("Expect an identifier but instead got $ident")
-        }
-        val typeAnnot = if(stream.peek is Token.ColonToken){
-            val typeident = stream.next()
-            if(typeident !is Token.IdentifierToken){
-                throw IllegalArgumentException("Expected an identifier but instead got $typeident")
+        when(ident){
+            is Some -> {
+                if(ident.t !is Token.IdentifierToken){
+                    return buildSourceAnnotation {
+                        message = "Expected an identifier but instead got ${ident.t}"
+                        errorLine {
+                            start = ident.t.startPos
+                            end = ident.t.endPos
+                        }
+                        sourceOrigin {
+                            start = ident.t.startPos
+                            end = ident.t.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
             }
-            Node.IdentifierNode(typeident.lexeme, typeident.pos)
+            is None -> return buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
+        }
+        val typeAnnot = if(stream.peek is Some){
+            val peek = stream.peek as Some<Token>
+            if(peek.t is Token.ColonToken){
+                val typeident = stream.next()
+                if(typeident is Some){
+                    val t = typeident.t
+                    if(t !is Token.IdentifierToken){
+                        return buildSourceAnnotation {
+                            message = "Expected an identifier but instead got ${typeident.t}"
+                            errorLine {
+                                start = t.startPos
+                                end = t.endPos
+                            }
+                            sourceOrigin {
+                                start = t.startPos
+                                end = t.endPos
+                                source = stream.input
+                            }
+                        }.right()
+                    }
+                    Node.IdentifierNode(t.lexeme, t.startPos, t.startPos)
+                }else{
+                    return buildSourceAnnotation {
+                        message = "Expected an identifier but instead got ${ident.t}"
+                        errorLine {
+                            start = ident.t.startPos
+                            end = ident.t.endPos
+                        }
+                        sourceOrigin {
+                            start = ident.t.startPos
+                            end = ident.t.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
+            }else{
+                Node.IdentifierNode("dyn", TokenPos.default, TokenPos.default)
+            }
         }else{
-            Node.IdentifierNode("dyn", TokenPos.default)
+            return buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
         }
         val expr = parseAssignment(stream)
-        return Node.StatementNode.VarNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, typeAnnot, token.pos)
+        return if(expr is Either.Left){
+            val t = expr.a
+            Node.StatementNode.VarNode(Node.IdentifierNode((ident.t as Token.IdentifierToken).lexeme, token.startPos, token.endPos), t, typeAnnot, token.startPos, token.endPos).left()
+        }else{
+            (expr as Either.Right).b.right()
+        }
     }
 
-    fun parseLet(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.LetNode{
+    fun parseLet(token: Token.IdentifierToken, stream: TokenStream): Either<Node.StatementNode.LetNode, SourceAnnotation>{
         val ident = stream.next()
-        if(ident !is Token.IdentifierToken){
-            throw RuntimeException("Expect an identifier but instead got $ident")
-        }
-        val typeAnnot = if(stream.peek is Token.ColonToken){
-            val typeident = stream.next()
-            if(typeident !is Token.IdentifierToken){
-                throw IllegalArgumentException("Expected an identifier but instead got $typeident")
+        when(ident){
+            is Some -> {
+                if(ident.t !is Token.IdentifierToken){
+                    return buildSourceAnnotation {
+                        message = "Expected an identifier but instead got ${ident.t}"
+                        errorLine {
+                            start = ident.t.startPos
+                            end = ident.t.endPos
+                        }
+                        sourceOrigin {
+                            start = ident.t.startPos
+                            end = ident.t.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
             }
-            Node.IdentifierNode(typeident.lexeme, typeident.pos)
+            is None -> return buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
+        }
+        return when(stream.peek){
+            is Some -> {
+                val typeAnnot = if(stream.peek is Some){
+                    val peek = stream.peek as Some<Token>
+                    if(peek.t is Token.ColonToken){
+                        val typeident = stream.next()
+                        if(typeident is Some){
+                            val t = typeident.t
+                            if(typeident.t !is Token.IdentifierToken){
+                                return buildSourceAnnotation {
+                                    message = "Expected an identifier but instead got $t"
+                                    errorLine {
+                                        start = t.startPos
+                                        end = t.endPos
+                                    }
+                                    sourceOrigin {
+                                        start = t.startPos
+                                        end = t.endPos
+                                        source = stream.input
+                                    }
+                                }.right()
+                            }else{
+                                t as Token.IdentifierToken
+                                Node.IdentifierNode(t.lexeme, t.startPos, t.endPos)
+                            }
+                        }else{
+                            return buildSourceAnnotation {
+                                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                                errorLine {
+                                    start = token.startPos
+                                    end = token.endPos
+                                }
+                                sourceOrigin {
+                                    start = token.startPos
+                                    end = token.endPos
+                                    source = stream.input
+                                }
+                            }.right()
+                        }
+                    }else{
+                        Node.IdentifierNode("dyn", TokenPos.default, TokenPos.default)
+                    }
+                }else{
+                    return buildSourceAnnotation {
+                        message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                        errorLine {
+                            start = token.startPos
+                            end = token.endPos
+                        }
+                        sourceOrigin {
+                            start = token.startPos
+                            end = token.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
+                val expr = parseAssignment(stream)
+                if(expr is Either.Left){
+                    Node.StatementNode.LetNode(Node.IdentifierNode((ident.t as Token.IdentifierToken).lexeme, ident.t.startPos, ident.t.endPos), expr.a, typeAnnot, token.startPos, token.endPos).left()
+                }else{
+                    (expr as Either.Right).b.right()
+                }
+            }
+            is None -> buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
+        }
+    }
+
+    fun parseConst(token: Token.IdentifierToken, stream: TokenStream): Either<Node.StatementNode.ConstNode, SourceAnnotation>{
+        val ident = stream.next()
+        when(ident){
+            is Some -> {
+                if(ident.t !is Token.IdentifierToken){
+                    return buildSourceAnnotation {
+                        message = "Expected an identifier but instead got ${ident.t}"
+                        errorLine {
+                            start = ident.t.startPos
+                            end = ident.t.endPos
+                        }
+                        sourceOrigin {
+                            start = ident.t.startPos
+                            end = ident.t.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
+            }
+            is None -> return buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
+        }
+        val typeAnnot = if(stream.peek is Some){
+            val peek = stream.peek as Some
+            if(peek.t is Token.ColonToken){
+                val typeident = stream.next()
+                if(typeident is Some){
+                    if(typeident.t !is Token.IdentifierToken){
+                        throw IllegalArgumentException("Expected an identifier but instead got $typeident")
+                    }
+                }else{
+                    return buildSourceAnnotation {
+                        message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                        errorLine {
+                            start = token.startPos
+                            end = token.endPos
+                        }
+                        sourceOrigin {
+                            start = token.startPos
+                            end = token.endPos
+                            source = stream.input
+                        }
+                    }.right()
+                }
+                Node.IdentifierNode((typeident.t as Token.IdentifierToken).lexeme, typeident.t.startPos, typeident.t.endPos)
+            }else{
+                Node.IdentifierNode("dyn", TokenPos.default, TokenPos.default)
+            }
         }else{
-            Node.IdentifierNode("dyn", TokenPos.default)
+            return buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
         }
         val expr = parseAssignment(stream)
-        return Node.StatementNode.LetNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, typeAnnot, token.pos)
-    }
-
-    fun parseConst(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.ConstNode{
-        val ident = stream.next()
-        if(ident !is Token.IdentifierToken){
-            throw RuntimeException("Expect an identifier but instead got $ident")
-        }
-        val typeAnnot = if(stream.peek is Token.ColonToken){
-            val typeident = stream.next()
-            if(typeident !is Token.IdentifierToken){
-                throw IllegalArgumentException("Expected an identifier but instead got $typeident")
-            }
-            Node.IdentifierNode(typeident.lexeme, typeident.pos)
+        return if(expr.isLeft()){
+            Node.StatementNode.ConstNode(
+                Node.IdentifierNode(
+                    (ident.t as Token.IdentifierToken).lexeme, ident.t.startPos, ident.t.endPos
+                ),
+                (expr as Either.Left).a,
+                typeAnnot,
+                token.startPos,
+                token.endPos
+            ).left()
         }else{
-            Node.IdentifierNode("dyn", TokenPos.default)
+            (expr as Either.Right).b.right()
         }
-        val expr = parseAssignment(stream)
-        return Node.StatementNode.ConstNode(Node.IdentifierNode(ident.lexeme, ident.pos), expr, typeAnnot, token.pos)
     }
 
-    fun parseReassignment(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.ReassignmentNode{
+    fun parseReassignment(token: Token.IdentifierToken, stream: TokenStream): Either<Node.StatementNode.ReassignmentNode, SourceAnnotation>{
         stream.next()
         val expr = parseExpression(stream)
-        return Node.StatementNode.ReassignmentNode(Node.IdentifierNode(token.lexeme, token.pos), expr, token.pos)
+        return when(expr){
+            is Either.Left -> Node.StatementNode.ReassignmentNode(Node.IdentifierNode(token.lexeme, token.startPos, token.endPos), expr.a, token.startPos, token.endPos).left()
+            is Either.Right -> return buildSourceAnnotation {
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = token.startPos
+                    end = token.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = token.endPos
+                    source = stream.input
+                }
+            }.right()
+        }
     }
 
-    fun tryParseProcCall(token: Token.IdentifierToken, stream: TokenStream): Node.StatementNode.ExpressionNode.ProcCallNode?{
-        if(stream.peek !is Token.LParenToken) return null
+    fun tryParseProcCall(token: Token.IdentifierToken, stream: TokenStream): Option<Node.StatementNode.ExpressionNode.ProcCallNode>{
+        if(stream.peek is Some){
+            val peek = stream.peek as Some
+            if(peek.t !is Token.LParenToken) return none()
+        }
         val args = arrayListOf<Node.StatementNode.ExpressionNode>()
         stream.next()
-        while(stream.peek !is Token.RParenToken && stream.hasNext()){
-            args += parseExpression(stream)
-            if(stream.peek !is Token.CommaToken){
-                if(stream.peek !is Token.RParenToken){
-                    throw IllegalStateException("Excepted either ',' or ')' but instead got ${stream.peek}")
+        while(stream.peek is Some<Token> && stream.hasNext()){
+            val peek = stream.peek as Some
+            if(peek.t is Token.RParenToken) break
+            args += when(val expr = parseExpression(stream)){
+                is Either.Left -> expr.a
+                is Either.Right -> return none()
+            }
+            if(stream.peek is Some){
+                val peek = stream.peek as Some<Token>
+                if(peek.t !is Token.CommaToken){
+                    if(peek.t !is Token.RParenToken){
+                        return none()
+                    }
+                    stream.next()
+                    break
                 }
-                stream.next()
-                break
             }
             stream.next()
         }
-        return Node.StatementNode.ExpressionNode.ProcCallNode(token.toIdentifierNode(), args, token.pos)
+        return Node.StatementNode.ExpressionNode.ProcCallNode(token.toIdentifierNode(), args, token.startPos, token.endPos).some()
     }
 
-    fun parseReturn(token: Token, stream: TokenStream): Node.StatementNode.ReturnNode{
+    fun parseReturn(token: Token, stream: TokenStream): Either<Node.StatementNode.ReturnNode, SourceAnnotation>{
         val expr = parseExpression(stream)
-        return Node.StatementNode.ReturnNode(expr, token.pos)
+        return when(expr){
+            is Either.Left -> Node.StatementNode.ReturnNode(expr.a, token.startPos, token.endPos).left()
+            is Either.Right -> expr
+        }
     }
 
-    fun parseStatement(stream: TokenStream): Node.StatementNode{
+    fun parseStatement(stream: TokenStream): Either<Node.StatementNode, SourceAnnotation>{
         return when(val next = stream.next()){
-            is Token.IdentifierToken -> {
-                when(next.lexeme) {
-                    "var" -> parseVar(next, stream)
-                    "let" -> parseLet(next, stream)
-                    "const" -> parseConst(next, stream)
-                    "def" -> parseProc(next, stream)
-                    "print" -> parsePrint(next, stream)
-                    "return" -> parseReturn(next, stream)
-                    else -> {
-                        when(val peek = stream.peek){
-                            is Token.EqualToken -> parseReassignment(next, stream)
-                            else -> tryParseProcCall(next, stream) ?: throw RuntimeException("Unrecognized token: $peek")
+            is Some -> {
+                when(val n = next.t){
+                    is Token.IdentifierToken -> {
+                        when(n.lexeme) {
+                            "var" -> parseVar(n, stream)
+                            "let" -> parseLet(n, stream)
+                            "const" -> parseConst(n, stream)
+                            "def" -> parseProc(n, stream)
+                            "print" -> parsePrint(n, stream)
+                            "return" -> parseReturn(n, stream)
+                            else -> {
+                                when(val peek = stream.peek){
+                                    is Some -> {
+                                        when(peek.t){
+                                            is Token.EqualToken -> parseReassignment(n, stream)
+                                            else ->  tryParseProcCall(n, stream).toEither {
+                                                buildSourceAnnotation {
+                                                    message = "No recognized statement."
+                                                    errorLine {
+                                                        start = next.t.startPos
+                                                        end = next.t.endPos
+                                                    }
+                                                    sourceOrigin {
+                                                        start = next.t.startPos
+                                                        end = next.t.endPos
+                                                        source = stream.input
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    is None ->{
+                                        buildSourceAnnotation {
+                                            message = "Unexpected end of token stream. This should only happen during development mode."
+                                            errorLine {
+                                                start = next.t.startPos
+                                                end = next.t.endPos
+                                            }
+                                            sourceOrigin {
+                                                start = next.t.startPos
+                                                end = next.t.endPos
+                                                source = stream.input
+                                            }
+                                        }.right()
+                                    }
+                                }
+                            }
                         }
                     }
+                    else -> buildSourceAnnotation {
+                        message = "Unrecognized token: ${next.t}"
+                        errorLine {
+                            start = next.t.startPos
+                            end = next.t.endPos
+                        }
+                        sourceOrigin {
+                            start = next.t.startPos
+                            end = next.t.endPos
+                            source = stream.input
+                        }
+                    }.right()
                 }
             }
-            else -> throw RuntimeException("Unrecognized token: $next")
-        }
+            is None -> buildSourceAnnotation {
+                message = "Unexpected end of token stream. This should only happen during development mode."
+                errorLine {
+                    start = TokenPos.default
+                    end = TokenPos.default
+                }
+                sourceOrigin {
+                    start = TokenPos.default
+                    end = TokenPos.default
+                    source = stream.input
+                }
+            }.right()
+        } as Either<Node.StatementNode, SourceAnnotation>
     }
 
-    fun parseModule(stream: TokenStream): Node.ModuleNode{
+    fun parseModule(stream: TokenStream): Option<Node.ModuleNode>{
         val statements = arrayListOf<Node.StatementNode>()
         while(stream.hasNext()){
-            statements.add(parseStatement(stream))
+            when(val statement = parseStatement(stream)){
+                is Either.Left -> statements.add(statement.a)
+                is Either.Right -> {
+                    errorHandler.error {
+                        message = "An error occurred while parsing"
+                        addAnnotation(statement.b)
+                    }
+                    return none()
+                }
+            }
         }
-        return Node.ModuleNode(Node.IdentifierNode(this.ident, TokenPos.default), statements)
+        return Node.ModuleNode(Node.IdentifierNode(this.ident, TokenPos.default, TokenPos.default), statements).some()
     }
 }

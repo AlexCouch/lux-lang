@@ -1,3 +1,6 @@
+import arrow.core.None
+import arrow.core.Some
+import errors.ErrorHandling
 import passes.SSATransformation
 import passes.symbolResolution.SymbolResolutionPass
 import passes.symbolResolution.SymbolTable
@@ -6,14 +9,19 @@ import java.io.File
 
 sealed class Either<out T>{
     data class Some<T>(val t: T): Either<T>()
-    object None : Either<Nothing>()
 
+    val isNone get() = this is None
+    val isSome get() = this is Some
+
+    object None : Either<Nothing>()
     fun unwrap() =
-        if(this is Some<*>){
+        if(this is Some<T>){
             this.t
         }else{
             throw IllegalStateException("Attempted to unwrap Either but was None")
         }
+
+    infix fun orelse(other: Any?) = if(this.isNone) other else this
 }
 
 fun main(args: Array<String>){
@@ -23,10 +31,17 @@ fun main(args: Array<String>){
     }
     val file = File(args[0])
     val src = file.readText()
+    val errorHandler = ErrorHandling()
     val lexer = Lexer(src)
-    val parser = Parser(file.nameWithoutExtension)
+    val parser = Parser(file.nameWithoutExtension, errorHandler)
     val tokenstream = lexer.tokenize()
-    val moduleAST = parser.parseModule(tokenstream)
+    val moduleAST = when(val ast = parser.parseModule(tokenstream)){
+        is Some -> ast.t
+        is None -> {
+            println(errorHandler)
+            return
+        }
+    }
     moduleAST.assignParents()
 //    println(moduleAST)
 //    val vm = VM(file.nameWithoutExtension)
@@ -36,8 +51,8 @@ fun main(args: Array<String>){
     val ir = astLowering.visitModule(moduleAST, symbolTable)
     val typeck = TypeCheckingPass()
     val typeCheckedModule = typeck.visitModule(ir, symbolTable)
-    val ssaTransformer = SSATransformation()
-    val ssaSymbolTable = SymbolTable()
-    val ssaIR = ssaTransformer.visitModule(typeCheckedModule, ssaSymbolTable)
-    println(ssaIR)
+//    val ssaTransformer = SSATransformation()
+//    val ssaSymbolTable = SymbolTable()
+//    val ssaIR = ssaTransformer.visitModule(typeCheckedModule, ssaSymbolTable)
+    println(typeCheckedModule)
 }

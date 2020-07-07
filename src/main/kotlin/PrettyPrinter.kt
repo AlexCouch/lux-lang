@@ -25,6 +25,14 @@ class PrettyPrinter{
     private var indentationLevel = 0
     private val sb = StringBuilder()
 
+    fun append(char: Char){
+        append(char.toString())
+    }
+
+    fun append(int: Int){
+        append(int.toString())
+    }
+
     fun append(string: String){
         if(indentationLevel > 0){
             if(string.contains("\n")) {
@@ -110,6 +118,36 @@ class PrettyPrinter{
         this.indentationLevel++
         this.block()
         this.indentationLevel--
+    }
+
+    fun indentN(n: Int, block: PrettyPrinter.()->Unit){
+        indentationLevel+=n
+        block()
+        indentationLevel-=n
+    }
+
+    fun spaced(n: Int, block: PrettyPrinter.()->Unit){
+        spaced(n)
+        block()
+    }
+
+    fun spaced(n: Int){
+        for(i in 0..n){
+            append(" ")
+        }
+    }
+
+    infix fun Char.padded(n: Int){
+        this padded 0..n
+    }
+
+    infix fun Char.padded(range: IntRange){
+        val padding = buildPrettyString {
+            for(i in range){
+                append(this@padded)
+            }
+        }
+        append(padding)
     }
 
     override fun toString(): String = this.sb.toString()

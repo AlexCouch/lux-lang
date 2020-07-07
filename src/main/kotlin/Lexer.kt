@@ -1,99 +1,119 @@
-class Lexer(input: String){
+import arrow.core.None
+import arrow.core.Option
+import arrow.core.Some
+import arrow.core.fix
+
+class Lexer(val input: String){
     private var currentPos = TokenPos.default
     private val scanner = Scanner(input)
 
     private val Char.delimitingToken: Either<Token> get() = when(this){
-        '=' -> Either.Some(Token.EqualToken(currentPos))
-        '+' -> Either.Some(Token.PlusToken(currentPos))
-        '-' -> Either.Some(Token.HyphenToken(currentPos))
-        '*' -> Either.Some(Token.StarToken(currentPos))
-        '/' -> Either.Some(Token.FSlashToken(currentPos))
-        ':' -> Either.Some(Token.ColonToken(currentPos))
-        ',' -> Either.Some(Token.CommaToken(currentPos))
-        '(' -> Either.Some(Token.LParenToken(currentPos))
-        ')' -> Either.Some(Token.RParenToken(currentPos))
-        '[' -> Either.Some(Token.LBracketToken(currentPos))
-        ']' -> Either.Some(Token.RBracketToken(currentPos))
-        '{' -> Either.Some(Token.LCurlyToken(currentPos))
-        '}' -> Either.Some(Token.RCurlyToken(currentPos))
-        '>' -> Either.Some(Token.RAngleToken(currentPos))
-        '<' -> Either.Some(Token.LAngleToken(currentPos))
+        '=' -> Either.Some(Token.EqualToken(currentPos, currentPos))
+        '+' -> Either.Some(Token.PlusToken(currentPos, currentPos))
+        '-' -> Either.Some(Token.HyphenToken(currentPos, currentPos))
+        '*' -> Either.Some(Token.StarToken(currentPos, currentPos))
+        '/' -> Either.Some(Token.FSlashToken(currentPos, currentPos))
+        ':' -> Either.Some(Token.ColonToken(currentPos, currentPos))
+        ',' -> Either.Some(Token.CommaToken(currentPos, currentPos))
+        '(' -> Either.Some(Token.LParenToken(currentPos, currentPos))
+        ')' -> Either.Some(Token.RParenToken(currentPos, currentPos))
+        '[' -> Either.Some(Token.LBracketToken(currentPos, currentPos))
+        ']' -> Either.Some(Token.RBracketToken(currentPos, currentPos))
+        '{' -> Either.Some(Token.LCurlyToken(currentPos, currentPos))
+        '}' -> Either.Some(Token.RCurlyToken(currentPos, currentPos))
+        '>' -> Either.Some(Token.RAngleToken(currentPos, currentPos))
+        '<' -> Either.Some(Token.LAngleToken(currentPos, currentPos))
         else -> Either.None
     }
 
-    fun advance(): Char?{
+    fun advance(): Option<Char> {
         val next = scanner.next()
-        currentPos = TokenPos(currentPos.line, currentPos.col + 1, scanner.idx, currentPos.indentLevel)
+        currentPos = TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 1), scanner.idx, currentPos.indentLevel)
         return next
     }
 
-    fun nextLine(): Char?{
+    fun nextLine(): Option<Char>{
         val next = scanner.next()
-        currentPos = TokenPos(currentPos.line + 1, 0, scanner.idx, 0)
+        currentPos = TokenPos(Position(currentPos.pos.line + 1, 0), scanner.idx, 0)
         return next
     }
 
     fun nextTab(){
-        currentPos = TokenPos(currentPos.line, currentPos.col + 1, scanner.idx, currentPos.indentLevel + 1)
+        currentPos = TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 1), scanner.idx, currentPos.indentLevel + 1)
     }
 
     fun tokenize(): TokenStream{
-        val tokens = TokenStream()
-        while(scanner.hasNext() || scanner.current != null){
+        val tokens = TokenStream(input)
+        while(scanner.hasNext() || scanner.current.isDefined()){
             val c = scanner.current
-            when{
-                c?.isWhitespace() == true -> when(c) {
-                    '\r' -> if(scanner.next() == '\n'){
-                        nextLine()
-                    }else{
-                        nextLine()
-                    }
-                    '\n' -> nextLine()
-                    '\t' -> nextTab()
-                    else -> {
-                        val buf = buildString {
-                            while(scanner.current?.isWhitespace() == true){
-                                append(scanner.current!!)
-                                advance()
+            when(c){
+                is Some -> {
+                    val t = c.t
+                    when{
+                        t.isWhitespace() -> when(t) {
+                            '\r' -> when(val next = scanner.next()) {
+                                is Some -> {
+                                    if (next.t == '\n') {
+                                        nextLine()
+                                    } else {
+                                        nextLine()
+                                    }
+                                }
+                            }
+                            '\n' -> nextLine()
+                            '\t' -> nextTab()
+                            else -> {
+                                val buf = buildString {
+                                    while(scanner.current is Some<Char> && (scanner.current as Some<Char>).t.isWhitespace()){
+                                        append((scanner.current as Some).t)
+                                        advance()
+                                    }
+                                }
+                                if(buf == "    "){
+                                    nextTab()
+                                }
                             }
                         }
-                        if(buf == "    "){
-                            nextTab()
-                        }
-                    }
-                }
-                c?.isLetter() == true -> {
-                    val startPos = currentPos
-                    val buf = buildString {
-                        append(c)
-                        scan@ while(true){
-                            val next = advance() ?: break@scan
-                            when{
-                                next.isLetterOrDigit() -> append(next)
-                                next == '_' -> append(next)
-                                else -> break@scan
+                        t.isLetter() -> {
+                            val startPos = currentPos
+                            val buf = buildString {
+                                append(t)
+                                scan@ while(true){
+                                    val next = advance()
+                                    if(next.isEmpty()) break@scan
+                                    if(next is Some){
+                                        when{
+                                            next.t.isLetterOrDigit() -> append(next.t)
+                                            next.t == '_' -> append(next.t)
+                                            else -> break@scan
+                                        }
+                                    }
+                                }
                             }
+                            tokens + Token.IdentifierToken(buf, startPos, currentPos)
                         }
-                    }
-                    tokens + Token.IdentifierToken(buf, startPos)
-                }
-                c?.isDigit() == true -> {
-                    val startPos = currentPos
-                    val buf = buildString {
-                        append(c)
-                        scan@ while(true){
-                            val next = advance() ?: break@scan
-                            when{
-                                next.isDigit() -> append(next)
-                                else -> break@scan
+                        t.isDigit() -> {
+                            val startPos = currentPos
+                            val buf = buildString {
+                                append(t)
+                                scan@ while(true){
+                                    val next = advance()
+                                    if(next.isEmpty()) break@scan
+                                    if(next is Some){
+                                        when{
+                                            next.t.isDigit() -> append(next.t)
+                                            else -> break@scan
+                                        }
+                                    }
+                                }
                             }
+                            tokens + Token.IntegerLiteralToken(buf.toInt(), startPos, currentPos)
+                        }
+                        t.delimitingToken != Either.None -> {
+                            tokens + t.delimitingToken.unwrap()
+                            advance()
                         }
                     }
-                    tokens + Token.IntegerLiteralToken(buf.toInt(), startPos)
-                }
-                c?.delimitingToken != Either.None -> {
-                    tokens + c!!.delimitingToken.unwrap() as Token
-                    advance()
                 }
             }
         }

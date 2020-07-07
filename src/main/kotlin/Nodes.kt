@@ -1,8 +1,8 @@
 
-sealed class Node(open val pos: TokenPos){
+sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
     internal var parent: Node? = null
 
-    data class ModuleNode(val ident: IdentifierNode, val statements: ArrayList<StatementNode>): Node(TokenPos.default){
+    data class ModuleNode(val ident: IdentifierNode, val statements: ArrayList<StatementNode>): Node(TokenPos.default, TokenPos.default){
         override fun assignParents() {
             for(statement in this.statements){
                 statement.parent = this
@@ -25,20 +25,26 @@ sealed class Node(open val pos: TokenPos){
             statements.forEach(block)
         }
     }
-    data class IdentifierNode(val str: String, override val pos: TokenPos): Node(pos){
+    data class IdentifierNode(val str: String, override val startPos: TokenPos, override val endPos: TokenPos): Node(startPos, endPos){
         override fun assignParents() {}
 
         override fun toString(): String = buildPrettyString{
             appendWithNewLine("Identifier{")
             indent {
                 appendWithNewLine("lexeme: $str,")
-                appendWithNewLine("pos: $pos")
+                appendWithNewLine("startPos: $startPos")
+                appendWithNewLine("endPos: $startPos")
             }
             append("}")
         }
     }
-    sealed class StatementNode(override val pos: TokenPos): Node(pos){
-        data class VarNode(val identifier: IdentifierNode, val expression: ExpressionNode, val type: IdentifierNode, override val pos: TokenPos): StatementNode(pos){
+    sealed class StatementNode(override val startPos: TokenPos, override val endPos: TokenPos): Node(startPos, endPos){
+        data class VarNode(val identifier: IdentifierNode,
+                           val expression: ExpressionNode,
+                           val type: IdentifierNode,
+                           override val startPos: TokenPos,
+                           override val endPos: TokenPos
+        ): StatementNode(startPos, endPos){
             override fun assignParents() {
                 identifier.parent = this
                 expression.parent = this
@@ -48,7 +54,8 @@ sealed class Node(open val pos: TokenPos){
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Var{")
                 indent {
-                    appendWithNewLine("pos: $pos")
+                    appendWithNewLine("startPos: $startPos")
+                    appendWithNewLine("endPos: $startPos")
                     appendWithNewLine("ident: $identifier")
                     appendWithNewLine("type: $type")
                     appendWithNewLine("expression: $expression")
@@ -61,7 +68,13 @@ sealed class Node(open val pos: TokenPos){
                 block(expression)
             }
         }
-        data class LetNode(val identifier: IdentifierNode, val expression: ExpressionNode, val type: IdentifierNode, override val pos: TokenPos): StatementNode(pos){
+        data class LetNode(
+            val identifier: IdentifierNode,
+            val expression: ExpressionNode,
+            val type: IdentifierNode,
+            override val startPos: TokenPos,
+            override val endPos: TokenPos
+        ): StatementNode(startPos, endPos){
             override fun assignParents() {
                 identifier.parent = this
                 expression.parent = this
@@ -71,7 +84,8 @@ sealed class Node(open val pos: TokenPos){
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Let{")
                 indent {
-                    appendWithNewLine("pos: $pos")
+                    appendWithNewLine("startPos: $startPos")
+                    appendWithNewLine("endPos: $endPos")
                     appendWithNewLine("ident: $identifier")
                     appendWithNewLine("type: $type")
                     appendWithNewLine("expression: $expression")
@@ -88,8 +102,9 @@ sealed class Node(open val pos: TokenPos){
             val identifier: IdentifierNode,
             val expression: ExpressionNode,
             val type: IdentifierNode,
-            override val pos: TokenPos
-        ): StatementNode(pos){
+            override val startPos: TokenPos,
+            override val endPos: TokenPos
+        ): StatementNode(startPos, endPos){
             override fun assignParents() {
                 identifier.parent = this
                 expression.parent = this
@@ -99,7 +114,8 @@ sealed class Node(open val pos: TokenPos){
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Const{")
                 indent {
-                    appendWithNewLine("pos: $pos")
+                    appendWithNewLine("startPos: $startPos")
+                    appendWithNewLine("endPos: $endPos")
                     appendWithNewLine("ident: $identifier")
                     appendWithNewLine("type: $type")
                     appendWithNewLine("expression: $expression")
@@ -112,7 +128,7 @@ sealed class Node(open val pos: TokenPos){
                 block(expression)
             }
         }
-        data class PrintNode(val expr: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
+        data class PrintNode(val expr: ExpressionNode, override val startPos: TokenPos, override val endPos: TokenPos): StatementNode(startPos, endPos){
             override fun assignParents() {
                 expr.parent = this
                 expr.assignParents()
@@ -130,7 +146,12 @@ sealed class Node(open val pos: TokenPos){
                 block(expr)
             }
         }
-        data class ReassignmentNode(val ident: IdentifierNode, val expr: ExpressionNode, override val pos: TokenPos): StatementNode(pos){
+        data class ReassignmentNode(
+            val ident: IdentifierNode,
+            val expr: ExpressionNode,
+            override val startPos: TokenPos,
+            override val endPos: TokenPos
+        ): StatementNode(startPos, endPos){
             override fun assignParents() {
                 ident.parent = this
                 expr.parent = this
@@ -152,7 +173,10 @@ sealed class Node(open val pos: TokenPos){
             }
         }
 
-        data class ReturnNode(val expr: ExpressionNode, override val pos: TokenPos): StatementNode(pos) {
+        data class ReturnNode(val expr: ExpressionNode,
+                              override val startPos: TokenPos,
+                              override val endPos: TokenPos
+        ): StatementNode(startPos, endPos) {
             override fun assignParents() {
                 expr.parent = this
                 expr.assignParents()
@@ -163,31 +187,42 @@ sealed class Node(open val pos: TokenPos){
                     appendWithNewLine("Return{")
                     indent {
                         appendWithNewLine("expr: $expr")
-                        appendWithNewLine("pos: $pos")
+                        appendWithNewLine("pos: $startPos")
                     }
                 }
         }
 
-        sealed class ExpressionNode(override val pos: TokenPos): StatementNode(pos){
-            data class IntegerLiteralNode(val int: Int, override val pos: TokenPos): ExpressionNode(pos){
+        sealed class ExpressionNode(override val startPos: TokenPos, override val endPos: TokenPos): StatementNode(startPos, endPos){
+            data class IntegerLiteralNode(
+                val int: Int,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos){
                 override fun assignParents() {}
 
-                override fun toString(): String = buildPrettyString{
-                    appendWithNewLine("Integer{")
-                    indent {
-                        appendWithNewLine("int: $int,")
-                        appendWithNewLine("pos: $pos")
+                override fun toString(): String =
+                    buildPrettyString{
+                        appendWithNewLine("Integer{")
+                        indent {
+                            appendWithNewLine("int: $int,")
+                            appendWithNewLine("startPos: $startPos")
+                            appendWithNewLine("endPos: $startPos")
+                        }
+                        append("}")
                     }
-                    append("}")
-                }
             }
-            data class ReferenceNode(val refIdent: IdentifierNode, override val pos: TokenPos): ExpressionNode(pos){
+            data class ReferenceNode(
+                val refIdent: IdentifierNode,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos){
                 override fun assignParents() {}
 
                 override fun toString(): String = buildPrettyString {
                     appendWithNewLine("Reference{")
                     indent {
-                        appendWithNewLine("pos: $pos,")
+                        appendWithNewLine("startPos: $startPos,")
+                        appendWithNewLine("endPos: $endPos,")
                         appendWithNewLine("ident: $refIdent")
                     }
                     append("}")
@@ -198,13 +233,19 @@ sealed class Node(open val pos: TokenPos){
                 }
 
             }
-            data class ProcCallNode(val refIdent: IdentifierNode, val arguments: List<ExpressionNode>, override val pos: TokenPos): ExpressionNode(pos){
+            data class ProcCallNode(
+                val refIdent: IdentifierNode,
+                val arguments: List<ExpressionNode>,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos){
                 override fun assignParents() {}
 
                 override fun toString(): String = buildPrettyString {
                     appendWithNewLine("ProcCall{")
                     indent {
-                        appendWithNewLine("pos: $pos,")
+                        appendWithNewLine("startPos: $startPos,")
+                        appendWithNewLine("endPos: $endPos,")
                         appendWithNewLine("ident: $refIdent,")
                         appendWithNewLine("args: [")
                         indent {
@@ -223,7 +264,11 @@ sealed class Node(open val pos: TokenPos){
                 }
             }
 
-            data class BlockNode(val stmts: List<StatementNode>, override val pos: TokenPos): ExpressionNode(pos) {
+            data class BlockNode(
+                val stmts: List<StatementNode>,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos) {
                 override fun assignParents() {
                     stmts.forEach {
                         it.parent = this
@@ -231,18 +276,20 @@ sealed class Node(open val pos: TokenPos){
                     }
                 }
 
-                override fun toString(): String = buildPrettyString{
-                    appendWithNewLine("AnonBlock{")
-                    indent {
-                        appendWithNewLine("pos: $pos")
-                        appendWithNewLine("body: [")
+                override fun toString(): String =
+                    buildPrettyString{
+                        appendWithNewLine("AnonBlock{")
                         indent {
-                            stmts.forEach {
-                                appendWithNewLine("$it")
+                            appendWithNewLine("startPos: $startPos")
+                            appendWithNewLine("endPos: $endPos")
+                            appendWithNewLine("body: [")
+                            indent {
+                                stmts.forEach {
+                                    appendWithNewLine("$it")
+                                }
                             }
+                            appendWithNewLine("]")
                         }
-                        appendWithNewLine("]")
-                    }
                     append("}")
                 }
 
@@ -250,7 +297,12 @@ sealed class Node(open val pos: TokenPos){
                     stmts.forEach(block)
                 }
             }
-            sealed class BinaryNode(open val left: ExpressionNode, open val right: ExpressionNode, override val pos: TokenPos): ExpressionNode(pos){
+            sealed class BinaryNode(
+                open val left: ExpressionNode,
+                open val right: ExpressionNode,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos){
                 override fun assignParents() {
                     left.parent = this
                     left.assignParents()
@@ -268,7 +320,12 @@ sealed class Node(open val pos: TokenPos){
                     block(left)
                     block(right)
                 }
-                data class BinaryAddNode(override val left: ExpressionNode, override val right: ExpressionNode, override val pos: TokenPos): BinaryNode(left, right, pos){
+                data class BinaryAddNode(
+                    override val left: ExpressionNode,
+                    override val right: ExpressionNode,
+                    override val startPos: TokenPos,
+                    override val endPos: TokenPos
+                ): BinaryNode(left, right, startPos, endPos){
                     override fun toString(): String = buildPrettyString{
                         appendWithNewLine("BinaryAdd{")
                         indent {
@@ -277,7 +334,12 @@ sealed class Node(open val pos: TokenPos){
                         appendWithNewLine("}")
                     }
                 }
-                data class BinaryMinusNode(override val left: ExpressionNode, override val right: ExpressionNode, override val pos: TokenPos): BinaryNode(left, right, pos){
+                data class BinaryMinusNode(
+                    override val left: ExpressionNode,
+                    override val right: ExpressionNode,
+                    override val startPos: TokenPos,
+                    override val endPos: TokenPos
+                ): BinaryNode(left, right, startPos, endPos){
                     override fun toString(): String = buildPrettyString{
                         appendWithNewLine("BinaryMinus{")
                         indent {
@@ -286,7 +348,12 @@ sealed class Node(open val pos: TokenPos){
                         appendWithNewLine("}")
                     }
                 }
-                data class BinaryMultNode(override val left: ExpressionNode, override val right: ExpressionNode, override val pos: TokenPos): BinaryNode(left, right, pos){
+                data class BinaryMultNode(
+                    override val left: ExpressionNode,
+                    override val right: ExpressionNode,
+                    override val startPos: TokenPos,
+                    override val endPos: TokenPos
+                ): BinaryNode(left, right, startPos, endPos){
                     override fun toString(): String = buildPrettyString{
                         appendWithNewLine("BinaryMult{")
                         indent {
@@ -295,7 +362,12 @@ sealed class Node(open val pos: TokenPos){
                         appendWithNewLine("}")
                     }
                 }
-                data class BinaryDivNode(override val left: ExpressionNode, override val right: ExpressionNode, override val pos: TokenPos): BinaryNode(left, right, pos){
+                data class BinaryDivNode(
+                    override val left: ExpressionNode,
+                    override val right: ExpressionNode,
+                    override val startPos: TokenPos,
+                    override val endPos: TokenPos
+                ): BinaryNode(left, right, startPos, endPos){
                     override fun toString(): String = buildPrettyString{
                         appendWithNewLine("BinaryDiv{")
                         indent {
@@ -311,8 +383,9 @@ sealed class Node(open val pos: TokenPos){
             val params: ArrayList<ProcParamNode>,
             val body: ArrayList<StatementNode>,
             val returnType: IdentifierNode,
-            override val pos: TokenPos
-        ): StatementNode(pos) {
+            override val startPos: TokenPos,
+            override val endPos: TokenPos
+        ): StatementNode(startPos, endPos) {
 
             override fun assignParents() {
                 ident.parent = this
@@ -325,7 +398,7 @@ sealed class Node(open val pos: TokenPos){
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("DefProc{")
                 indent {
-                    appendWithNewLine("pos: $pos,")
+                    appendWithNewLine("pos: $startPos,")
                     appendWithNewLine("ident: $ident,")
                     appendWithNewLine("params: [")
                     indent {
@@ -352,7 +425,12 @@ sealed class Node(open val pos: TokenPos){
             }
         }
 
-        data class ProcParamNode(val ident: IdentifierNode, val type: IdentifierNode, override val pos: TokenPos): StatementNode(pos) {
+        data class ProcParamNode(
+            val ident: IdentifierNode,
+            val type: IdentifierNode,
+            override val startPos: TokenPos,
+            override val endPos: TokenPos
+        ): StatementNode(startPos, endPos) {
             override fun assignParents() {
                 ident.parent = this
             }
@@ -360,7 +438,7 @@ sealed class Node(open val pos: TokenPos){
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Param{")
                 indent {
-                    appendWithNewLine("pos: $pos,")
+                    appendWithNewLine("pos: $startPos,")
                     appendWithNewLine("ident: $ident")
                 }
                 append("}")
@@ -406,4 +484,4 @@ sealed class Node(open val pos: TokenPos){
     }
 }
 
-fun Token.IdentifierToken.toIdentifierNode() = Node.IdentifierNode(this.lexeme, this.pos)
+fun Token.IdentifierToken.toIdentifierNode() = Node.IdentifierNode(lexeme, startPos, endPos)

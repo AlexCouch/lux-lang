@@ -16,6 +16,7 @@ interface IRDynamicTypeMarker: TypeMarker
 interface IRUnresolvedTypeMarker: TypeMarker
 
 class IRSimpleType(val symbol: String) : IRType, IRSimpleTypeMarker{
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString{
             append(symbol)

@@ -37,9 +37,19 @@ class IRBinaryPlus(
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitBinaryPlus(this, data)
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("add $left, $right")
+            append("div")
+            append(" $left, $right")
+        }
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            blue{
+                append("div")
+            }
+            append(" $left, $right")
         }
 }
 
@@ -55,9 +65,19 @@ class IRBinaryMinus(
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitBinaryMinus(this, data)
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("sub $left, $right")
+            append("div")
+            append(" $left, $right")
+        }
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            blue{
+                append("div")
+            }
+            append(" $left, $right")
         }
 }
 
@@ -73,9 +93,19 @@ class IRBinaryMult(
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitBinaryMult(this, data)
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("mul $left, $right")
+            append("div")
+            append(" $left, $right")
+        }
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            blue{
+                append("div")
+            }
+            append(" $left, $right")
         }
 }
 
@@ -91,8 +121,18 @@ class IRBinaryDiv(
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitBinaryDiv(this, data)
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("div $left, $right")
+            append("div")
+            append(" $left, $right")
+        }
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            blue{
+                append("div")
+            }
+            append(" $left, $right")
         }
 }

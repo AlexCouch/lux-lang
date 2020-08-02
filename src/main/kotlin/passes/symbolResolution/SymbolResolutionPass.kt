@@ -111,6 +111,7 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             is Node.StatementNode.ExpressionNode.ReferenceNode -> visitRef(expression, parent, data)
             is Node.StatementNode.ExpressionNode.ProcCallNode -> visitProcCall(expression, parent, data)
             is Node.StatementNode.ExpressionNode.BlockNode -> visitBlock(expression, parent, data)
+            else -> TODO()
         }
 
     override fun visitProcCall(procCallNode: Node.StatementNode.ExpressionNode.ProcCallNode, parent: IRStatementContainer, data: SymbolTable): IRExpression =

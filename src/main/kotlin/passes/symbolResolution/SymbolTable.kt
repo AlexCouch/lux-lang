@@ -122,6 +122,7 @@ class Scope<B, S>(val owner: IRSymbolOwner, val parent: Scope<B, S>?)
         nameToSymbol[name] = s
     }
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString{
             appendWithNewLine("scope{")

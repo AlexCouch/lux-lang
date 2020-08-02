@@ -1,29 +1,28 @@
-object PrettyColors{
-    val RED: String
-        get() = "\u001B[31m"
-    val BLUE: String
-        get() = "\u001B[34m"
-    val GREEN: String
-        get() = "\u001B[32m"
-    val YELLOW: String
-        get() = "\u001B[33m"
-    val WHITE: String
-        get() = "\u001B[30m"
-    val BLACK: String
-        get() = "\u001B[37m"
-    val UNDERLINE: String
-        get() = "\u001B[04m"
-    val BOLD: String
-        get() = "\u001B[01m"
-    val ITALIC: String
-        get() = "\u001B[03m"
-    val RESET: String
-        get() = "\u001B[0m"
+enum class PrettyColors(val ansi: String){
+    RED("\u001B[31m"),
+    BLUE("\u001B[34m"),
+    GREEN("\u001B[32m"),
+    YELLOW("\u001B[33m"),
+    WHITE("\u001B[30m"),
+    BLACK("\u001B[37m"),
+    UNDERLINE("\u001B[04m"),
+    BOLD("\u001B[01m"),
+    ITALIC("\u001B[03m"),
+    RESET("\u001B[0m")
+    ;
 }
 
+@ExperimentalStdlibApi
 class PrettyPrinter{
     private var indentationLevel = 0
     private val sb = StringBuilder()
+
+    @ExperimentalStdlibApi
+    private val styleStack = ArrayDeque<PrettyColors>()
+
+    init {
+        styleStack.addLast(PrettyColors.RESET)
+    }
 
     fun append(char: Char){
         append(char.toString())
@@ -56,58 +55,77 @@ class PrettyPrinter{
         }
     }
 
+    @ExperimentalStdlibApi
     fun red(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.RED)
+        this.append(PrettyColors.RED.ansi)
+        styleStack.addLast(PrettyColors.RED)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun green(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.GREEN)
+        this.append(PrettyColors.GREEN.ansi)
+        styleStack.addLast(PrettyColors.GREEN)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun blue(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.BLUE)
+        this.append(PrettyColors.BLUE.ansi)
+        styleStack.addLast(PrettyColors.BLUE)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun yellow(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.YELLOW)
+        this.append(PrettyColors.YELLOW.ansi)
+        styleStack.addLast(PrettyColors.YELLOW)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun white(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.WHITE)
+        this.append(PrettyColors.WHITE.ansi)
+        styleStack.addLast(PrettyColors.WHITE)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun black(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.BLACK)
+        this.append(PrettyColors.BLACK.ansi)
+        styleStack.addLast(PrettyColors.BLACK)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun bold(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.BOLD)
+        this.append(PrettyColors.BOLD.ansi)
+        styleStack.addLast(PrettyColors.BOLD)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun italics(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.ITALIC)
+        this.append(PrettyColors.ITALIC.ansi)
+        styleStack.addLast(PrettyColors.ITALIC)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun underline(block: PrettyPrinter.()->Unit){
-        this.append(PrettyColors.UNDERLINE)
+        this.append(PrettyColors.UNDERLINE.ansi)
+        styleStack.addLast(PrettyColors.UNDERLINE)
         this.block()
-        this.append(PrettyColors.RESET)
+        styleStack.removeLast()
+        this.append(styleStack.last().ansi)
     }
 
     fun appendWithNewLine(string: String){
@@ -154,6 +172,7 @@ class PrettyPrinter{
 
 }
 
+@ExperimentalStdlibApi
 fun buildPrettyString(block: PrettyPrinter.()->Unit): String{
     val prettyPrinter = PrettyPrinter()
     prettyPrinter.block()

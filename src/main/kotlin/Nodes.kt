@@ -1,3 +1,5 @@
+import arrow.core.Option
+import arrow.core.Some
 
 sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
     internal var parent: Node? = null
@@ -10,6 +12,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
             }
         }
 
+        @ExperimentalStdlibApi
         override fun toString(): String = buildPrettyString{
             appendWithNewLine("Module{")
             indent {
@@ -28,6 +31,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
     data class IdentifierNode(val str: String, override val startPos: TokenPos, override val endPos: TokenPos): Node(startPos, endPos){
         override fun assignParents() {}
 
+        @ExperimentalStdlibApi
         override fun toString(): String = buildPrettyString{
             appendWithNewLine("Identifier{")
             indent {
@@ -51,6 +55,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 expression.assignParents()
             }
 
+            @ExperimentalStdlibApi
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Var{")
                 indent {
@@ -81,6 +86,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 expression.assignParents()
             }
 
+            @ExperimentalStdlibApi
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Let{")
                 indent {
@@ -111,6 +117,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 expression.assignParents()
             }
 
+            @ExperimentalStdlibApi
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Const{")
                 indent {
@@ -134,6 +141,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 expr.assignParents()
             }
 
+            @ExperimentalStdlibApi
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Print{")
                 indent {
@@ -158,6 +166,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 expr.assignParents()
             }
 
+            @ExperimentalStdlibApi
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Reassignment{")
                 indent {
@@ -182,6 +191,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 expr.assignParents()
             }
 
+            @ExperimentalStdlibApi
             override fun toString(): String =
                 buildPrettyString {
                     appendWithNewLine("Return{")
@@ -200,6 +210,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
             ): ExpressionNode(startPos, endPos){
                 override fun assignParents() {}
 
+                @ExperimentalStdlibApi
                 override fun toString(): String =
                     buildPrettyString{
                         appendWithNewLine("Integer{")
@@ -218,6 +229,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
             ): ExpressionNode(startPos, endPos){
                 override fun assignParents() {}
 
+                @ExperimentalStdlibApi
                 override fun toString(): String = buildPrettyString {
                     appendWithNewLine("Reference{")
                     indent {
@@ -241,6 +253,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
             ): ExpressionNode(startPos, endPos){
                 override fun assignParents() {}
 
+                @ExperimentalStdlibApi
                 override fun toString(): String = buildPrettyString {
                     appendWithNewLine("ProcCall{")
                     indent {
@@ -264,6 +277,52 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 }
             }
 
+            data class BinaryConditionalNode(
+                val condition: ExpressionNode,
+                val then: BlockNode,
+                val otherwise: Option<BlockNode>,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos) {
+                override fun assignParents() {
+                    condition.parent = this
+                    condition.assignParents()
+                    then.parent = this
+                    then.assignParents()
+                    if(otherwise is Some){
+                        otherwise.t.parent = this
+                        otherwise.t.assignParents()
+                    }
+                }
+            }
+
+            data class WhenConditionalNode(
+                val branches: ArrayList<ConditionalBranchNode>,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos){
+                override fun assignParents() {
+                    branches.forEach {
+                        it.parent = this
+                        it.assignParents()
+                    }
+                }
+            }
+
+            data class ConditionalBranchNode(
+                val condition: ExpressionNode,
+                val then: BlockNode,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos){
+                override fun assignParents() {
+                    condition.parent = this
+                    condition.assignParents()
+                    then.parent = this
+                    then.assignParents()
+                }
+            }
+
             data class BlockNode(
                 val stmts: List<StatementNode>,
                 override val startPos: TokenPos,
@@ -276,6 +335,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                     }
                 }
 
+                @ExperimentalStdlibApi
                 override fun toString(): String =
                     buildPrettyString{
                         appendWithNewLine("AnonBlock{")
@@ -311,6 +371,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                     right.assignParents()
                 }
 
+                @ExperimentalStdlibApi
                 override fun toString(): String = buildPrettyString{
                     appendWithNewLine("left: $left,")
                     appendWithNewLine("right: $right")
@@ -326,6 +387,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                     override val startPos: TokenPos,
                     override val endPos: TokenPos
                 ): BinaryNode(left, right, startPos, endPos){
+                    @ExperimentalStdlibApi
                     override fun toString(): String = buildPrettyString{
                         appendWithNewLine("BinaryAdd{")
                         indent {
@@ -340,6 +402,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                     override val startPos: TokenPos,
                     override val endPos: TokenPos
                 ): BinaryNode(left, right, startPos, endPos){
+                    @ExperimentalStdlibApi
                     override fun toString(): String = buildPrettyString{
                         appendWithNewLine("BinaryMinus{")
                         indent {
@@ -354,6 +417,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                     override val startPos: TokenPos,
                     override val endPos: TokenPos
                 ): BinaryNode(left, right, startPos, endPos){
+                    @ExperimentalStdlibApi
                     override fun toString(): String = buildPrettyString{
                         appendWithNewLine("BinaryMult{")
                         indent {
@@ -368,6 +432,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                     override val startPos: TokenPos,
                     override val endPos: TokenPos
                 ): BinaryNode(left, right, startPos, endPos){
+                    @ExperimentalStdlibApi
                     override fun toString(): String = buildPrettyString{
                         appendWithNewLine("BinaryDiv{")
                         indent {
@@ -395,6 +460,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 }
             }
 
+            @ExperimentalStdlibApi
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("DefProc{")
                 indent {
@@ -435,6 +501,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 ident.parent = this
             }
 
+            @ExperimentalStdlibApi
             override fun toString(): String = buildPrettyString{
                 appendWithNewLine("Param{")
                 indent {

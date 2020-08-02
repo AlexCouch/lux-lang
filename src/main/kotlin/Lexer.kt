@@ -38,8 +38,10 @@ class Lexer(val input: String){
         return next
     }
 
-    fun nextTab(){
+    fun nextTab(): Option<Char>{
+        val next = scanner.next()
         currentPos = TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 1), scanner.idx, currentPos.indentLevel + 1)
+        return next
     }
 
     fun tokenize(): TokenStream{

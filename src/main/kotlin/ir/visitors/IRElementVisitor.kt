@@ -4,6 +4,10 @@ import ir.IRElement
 import ir.IRStatement
 import ir.declarations.*
 import ir.declarations.expressions.*
+import ir.declarations.expressions.branching.IRBinaryConditional
+import ir.declarations.ssa.BasicBlock
+import ir.declarations.ssa.PhiFunction
+import ir.declarations.ssa.SSAVar
 
 interface IRElementVisitor<R, D> {
     fun visitElement(element: IRElement, data: D): R
@@ -26,4 +30,12 @@ interface IRElementVisitor<R, D> {
     fun visitProcParam(element: IRProcParam, data: D): R = visitStatement(element, data)
     fun visitProcCall(element: IRProcCall, data: D): R = visitExpression(element, data)
     fun visitReturn(element: IRReturn, data: D): R = visitStatement(element, data)
+    fun visitBlock(element: IRBlock, data: D): R = visitStatement(element, data)
+    fun visitBinaryConditional(element: IRBinaryConditional, data: D): R = visitStatement(element, data)
+
+    //          SSA ELEMENTS            //
+
+    fun visitBasicBlock(element: BasicBlock, data: D): R = visitStatement(element, data)
+    fun visitSSAVar(element: SSAVar, data: D): R = visitStatement(element, data)
+    fun visitPhi(element: PhiFunction, data: D): R = visitStatement(element, data)
 }

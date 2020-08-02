@@ -29,14 +29,34 @@ class IRProcCall(
         //
     }
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString{
-            append("call %$name(")
+            append("call")
+            append(" ")
+            append("%$name")
+            append("(")
             arguments.forEachIndexed { i, it ->
                 append(it.toString())
                 if(i < arguments.size - 1) append(", ")
             }
             append(")")
         }
-
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString{
+            blue {
+                append("call")
+            }
+            append(" ")
+            red{
+                append("%$name")
+            }
+            append("(")
+            arguments.forEachIndexed { i, it ->
+                append(it.toString())
+                if(i < arguments.size - 1) append(", ")
+            }
+            append(")")
+        }
 }

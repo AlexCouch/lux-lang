@@ -31,10 +31,29 @@ class IRConstant<T>(
         )
     }
 
+    @ExperimentalStdlibApi
     override fun toString(): String  =
         buildPrettyString{
             when(kind){
-                is IRConstantKind.Int -> append("int $value")
+                is IRConstantKind.Int -> {
+                    append("int ")
+                    append("$value")
+                }
+            }
+        }
+
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String  =
+        buildPrettyString{
+            when(kind){
+                is IRConstantKind.Int -> {
+                    green{
+                        append("int ")
+                    }
+                    blue {
+                        append("$value")
+                    }
+                }
             }
         }
 

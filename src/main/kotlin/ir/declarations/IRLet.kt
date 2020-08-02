@@ -26,9 +26,32 @@ class IRLet(override val name: String,
         expression.transform(transformer, data)
     }
 
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString{
+            green {
+                append("$type")
+            }
+            append(" ")
+            blue{
+                append("let")
+            }
+            append(" ")
+            red{
+                append("%$name")
+            }
+            append(" = $expression")
+        }
+
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString{
-            append("$type let %$name = $expression")
+            append("$type")
+            append(" ")
+            append("let")
+            append(" ")
+            append("%$name")
+            append(" = $expression")
         }
 
 }

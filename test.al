@@ -4,8 +4,12 @@ age = age + 1
 print age
 
 def x(a: int, b: int, c: int) -> int:
-    let sum = a * b / c
-    const x = 10
-    return x
+	let sum = a * b / c
+	const x = 10
+	return x
 
-print x(5, 3, 6)
+const result =
+	if x(5, 3, 6):
+		result
+	else:
+		5

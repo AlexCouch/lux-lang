@@ -26,21 +26,76 @@ class IRProc(
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitProc(this, data)
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
             appendWithNewLine("")
-            append("$returnType proc %$name(")
+            append("$returnType")
+            append(" ")
+            append("proc")
+            append(" ")
+            append("%$name")
+            append("(")
             params.forEachIndexed { i, it ->
-                append("${it.type} %${it.name}")
+                append("${it.type}")
+
+                append(" ")
+                append("%${it.name}")
                 if(i < params.size - 1) append(", ")
             }
-            appendWithNewLine(") do")
+            append(") ")
+            appendWithNewLine("do")
             indent {
                 statements.forEach {
                     appendWithNewLine(it.toString())
                 }
             }
-            appendWithNewLine("endproc %$name")
+            append("endproc")
+            append(" ")
+            appendWithNewLine("%$name")
+        }
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            appendWithNewLine("")
+            green {
+                append("$returnType")
+            }
+            append(" ")
+            blue {
+                append("proc")
+            }
+            append(" ")
+            red {
+                append("%$name")
+            }
+            append("(")
+            params.forEachIndexed { i, it ->
+                green{
+                    append("${it.type}")
+                }
+                append(" ")
+                red {
+                    append("%${it.name}")
+                }
+                if(i < params.size - 1) append(", ")
+            }
+            append(") ")
+            blue {
+                appendWithNewLine("do")
+            }
+            indent {
+                statements.forEach {
+                    appendWithNewLine(it.toString())
+                }
+            }
+            blue{
+                append("endproc")
+            }
+            append(" ")
+            red {
+                appendWithNewLine("%$name")
+            }
         }
 }
 

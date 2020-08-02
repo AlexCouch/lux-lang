@@ -1,7 +1,9 @@
 import arrow.core.None
 import arrow.core.Some
 import errors.ErrorHandling
-import passes.SSATransformation
+import passes.PreSSATransformation
+import passes.cfg.CFG
+import passes.cfg.CFGPass
 import passes.symbolResolution.SymbolResolutionPass
 import passes.symbolResolution.SymbolTable
 import passes.typecheck.TypeCheckingPass
@@ -24,6 +26,7 @@ sealed class Either<out T>{
     infix fun orelse(other: Any?) = if(this.isNone) other else this
 }
 
+@ExperimentalStdlibApi
 fun main(args: Array<String>){
     if(args.isEmpty()){
         println("Must provide a file to interpret")
@@ -43,7 +46,7 @@ fun main(args: Array<String>){
         }
     }
     moduleAST.assignParents()
-//    println(moduleAST)
+    println(moduleAST)
 //    val vm = VM(file.nameWithoutExtension)
 //    vm.start(moduleAST)
     val symbolTable = SymbolTable()
@@ -51,8 +54,12 @@ fun main(args: Array<String>){
     val ir = astLowering.visitModule(moduleAST, symbolTable)
     val typeck = TypeCheckingPass()
     val typeCheckedModule = typeck.visitModule(ir, symbolTable)
-//    val ssaTransformer = SSATransformation()
-//    val ssaSymbolTable = SymbolTable()
-//    val ssaIR = ssaTransformer.visitModule(typeCheckedModule, ssaSymbolTable)
-    println(typeCheckedModule)
+    val ssaTransformer = PreSSATransformation()
+    val ssaSymbolTable = SymbolTable()
+    val ssaIR = ssaTransformer.visitModule(typeCheckedModule, ssaSymbolTable)
+    println(ssaIR)
+    val graph = CFG()
+    val cfgPass = CFGPass()
+    val cfgModule = cfgPass.visitModule(ssaIR, graph)
+//    graph.toGraph()
 }

@@ -1,5 +1,6 @@
 import arrow.core.*
 import arrow.core.Either
+import arrow.core.extensions.option.monad.flatMap
 import errors.ErrorHandling
 import errors.SourceAnnotation
 import errors.buildSourceAnnotation
@@ -94,12 +95,17 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                         }
                     }
                     is Token.IdentifierToken -> {
-                        val ref = Node.StatementNode.ExpressionNode.ReferenceNode(n.toIdentifierNode(), n.startPos, n.endPos)
-                        val result = tryParseBinary(ref, stream) or tryParseProcCall(n, stream)
-                        if(result is Some){
-                            result.t.left()
-                        }else{
-                            ref.left()
+                        when(n.toIdentifierNode().str){
+                            "if" -> parseBinaryConditional(n, stream)
+                            else -> {
+                                val ref = Node.StatementNode.ExpressionNode.ReferenceNode(n.toIdentifierNode(), n.startPos, n.endPos)
+                                val result = tryParseBinary(ref, stream) or tryParseProcCall(n, stream)
+                                if(result is Some){
+                                    result.t.left()
+                                }else{
+                                    ref.left()
+                                }
+                            }
                         }
                     }
                     else -> buildSourceAnnotation {
@@ -117,8 +123,14 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                 }
             }
             is None -> buildSourceAnnotation {
-                message = "Reach the end of token stream. This is a bug in the compiler. This should only happen in developer mode"
+                message = "Unexpectedly reached end of token stream. This should only happen in development mode."
+                errorLine {
+                    start = TokenPos.default
+                    end = TokenPos.default
+                }
                 sourceOrigin {
+                    start = TokenPos.default
+                    end = TokenPos.default
                     source = stream.input
                 }
             }.right()
@@ -800,11 +812,123 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
         }
     }
 
-    fun parseStatement(stream: TokenStream): Either<Node.StatementNode, SourceAnnotation>{
-        return when(val next = stream.next()){
+    fun parseBlock(token: Token, stream: TokenStream): Either<Node.StatementNode.ExpressionNode.BlockNode, SourceAnnotation>{
+        val stmts = arrayListOf<Node.StatementNode>()
+        while(
+            stream.hasNext() &&
+            (stream.peek is Some  && (stream.peek as Some).t.startPos.indentLevel > token.startPos.indentLevel)){
+            stmts.add(when(val stmt = parseStatement(stream)){
+                is Either.Left -> stmt.a
+                is Either.Right -> return stmt
+            })
+        }
+        return Node.StatementNode.ExpressionNode.BlockNode(stmts, token.startPos, (stream.current as Some).t.endPos).left()
+    }
+
+    fun parseBinaryConditional(
+        token: Token,
+        stream: TokenStream
+    ): Either<
+            Node.StatementNode.ExpressionNode.BinaryConditionalNode,
+            SourceAnnotation>{
+        val condition = when(val condition = parseExpression(stream)){
+            is Either.Left -> condition.a
+            is Either.Right -> return condition.b.right()
+        }
+        when(val colon = stream.next()){
             is Some -> {
-                when(val n = next.t){
+                when(colon.t){
+                    is Token.ColonToken -> {}
+                    else ->
+                        return buildSourceAnnotation {
+                            message = "Expected ':' but instead found ${colon.t}"
+                            errorLine {
+                                start = colon.t.startPos
+                                end = colon.t.endPos
+                            }
+                            sourceOrigin {
+                                start = token.startPos
+                                end = colon.t.endPos
+                            }
+                        }.right()
+                }
+
+            }
+            else -> return buildSourceAnnotation {
+                message = "Expected ':' but instead found EOF"
+                errorLine {
+                    start = condition.endPos
+                    end = condition.endPos
+                }
+                sourceOrigin {
+                    start = token.startPos
+                    end = condition.endPos
+                }
+            }.right()
+        }
+
+        val block = when(val block = parseBlock(token, stream)){
+            is Either.Left -> block.a
+            is Either.Right -> return block
+        }
+        val current = stream.current
+        if(current is Some && current.t is Token.IdentifierToken){
+            if((current.t as Token.IdentifierToken).lexeme == "else"){
+                when(val colon = stream.next()){
+                    is Some -> {
+                        when(colon.t){
+                            is Token.ColonToken -> {}
+                            else ->
+                                return buildSourceAnnotation {
+                                    message = "Expected ':' but instead found ${colon.t}"
+                                    errorLine {
+                                        start = colon.t.startPos
+                                        end = colon.t.endPos
+                                    }
+                                    sourceOrigin {
+                                        start = token.startPos
+                                        end = colon.t.endPos
+                                    }
+                                }.right()
+                        }
+
+                    }
+                    else -> return buildSourceAnnotation {
+                        message = "Expected ':' but instead found EOF"
+                        errorLine {
+                            start = condition.endPos
+                            end = condition.endPos
+                        }
+                        sourceOrigin {
+                            start = token.startPos
+                            end = condition.endPos
+                        }
+                    }.right()
+                }
+                return when(val elseBlock = parseBlock(current.t, stream)){
+                    is Either.Left ->
+                        Node.StatementNode.ExpressionNode.BinaryConditionalNode(
+                            condition,
+                            block,
+                            elseBlock.a.some(),
+                            token.startPos,
+                            elseBlock.a.endPos
+                        ).left()
+                    is Either.Right ->
+                        elseBlock
+                }
+            }
+        }
+        return Node.StatementNode.ExpressionNode.BinaryConditionalNode(condition, block, none(), token.startPos, block.endPos).left()
+    }
+
+    fun parseStatement(stream: TokenStream): Either<Node.StatementNode, SourceAnnotation>{
+        return when(stream.peek){
+            is Some -> {
+                val peekNext = stream.peek
+                when(val n = (stream.peek as Some).t){
                     is Token.IdentifierToken -> {
+                        val next = stream.next()
                         when(n.lexeme) {
                             "var" -> parseVar(n, stream)
                             "let" -> parseLet(n, stream)
@@ -812,24 +936,35 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                             "def" -> parseProc(n, stream)
                             "print" -> parsePrint(n, stream)
                             "return" -> parseReturn(n, stream)
+                            "if" -> parseBinaryConditional(n, stream)
+//                            "when" -> parseWhen(n, stream)
                             else -> {
                                 when(val peek = stream.peek){
                                     is Some -> {
                                         when(peek.t){
                                             is Token.EqualToken -> parseReassignment(n, stream)
-                                            else ->  tryParseProcCall(n, stream).toEither {
-                                                buildSourceAnnotation {
+                                            else -> {
+                                                val expr = parseExpression(stream)
+                                                if(expr.isLeft()){
+                                                    return expr
+                                                }
+                                                val procCall = tryParseProcCall(n, stream)
+                                                if(procCall is Some){
+                                                    return procCall.t.left()
+                                                }
+
+                                                return buildSourceAnnotation {
                                                     message = "No recognized statement."
                                                     errorLine {
-                                                        start = next.t.startPos
-                                                        end = next.t.endPos
+                                                        start = peek.t.startPos
+                                                        end = peek.t.endPos
                                                     }
                                                     sourceOrigin {
-                                                        start = next.t.startPos
-                                                        end = next.t.endPos
+                                                        start = peek.t.startPos
+                                                        end = peek.t.endPos
                                                         source = stream.input
                                                     }
-                                                }
+                                                }.right()
                                             }
                                         }
                                     }
@@ -837,12 +972,12 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                                         buildSourceAnnotation {
                                             message = "Unexpected end of token stream. This should only happen during development mode."
                                             errorLine {
-                                                start = next.t.startPos
-                                                end = next.t.endPos
+                                                start = n.startPos
+                                                end = n.endPos
                                             }
                                             sourceOrigin {
-                                                start = next.t.startPos
-                                                end = next.t.endPos
+                                                start = n.startPos
+                                                end = n.endPos
                                                 source = stream.input
                                             }
                                         }.right()
@@ -851,18 +986,25 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                             }
                         }
                     }
-                    else -> buildSourceAnnotation {
-                        message = "Unrecognized token: ${next.t}"
-                        errorLine {
-                            start = next.t.startPos
-                            end = next.t.endPos
+                    else -> {
+                        val expr = parseExpression(stream)
+                        if(expr.isLeft()){
+                            return expr
                         }
-                        sourceOrigin {
-                            start = next.t.startPos
-                            end = next.t.endPos
-                            source = stream.input
-                        }
-                    }.right()
+
+                        return buildSourceAnnotation {
+                            message = "No recognized statement."
+                            errorLine {
+                                start = n.startPos
+                                end = n.endPos
+                            }
+                            sourceOrigin {
+                                start = n.startPos
+                                end = n.endPos
+                                source = stream.input
+                            }
+                        }.right()
+                    }
                 }
             }
             is None -> buildSourceAnnotation {

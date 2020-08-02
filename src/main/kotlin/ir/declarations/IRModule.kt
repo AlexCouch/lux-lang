@@ -14,15 +14,40 @@ class IRModule(override val name: String, override var parent: IRStatementContai
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitModule(this, data)
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString{
-            appendWithNewLine("mod %$name")
+            append("mod")
+            append(" ")
+            appendWithNewLine("%$name")
             indent {
                 statements.forEach {
                     appendWithNewLine(it.toString())
                 }
             }
-            append("endmod %$name")
+            append("endmod")
+            append(" %$name")
         }
-
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString{
+            blue{
+                append("mod")
+            }
+            append(" ")
+            red{
+                appendWithNewLine("%$name")
+            }
+            indent {
+                statements.forEach {
+                    appendWithNewLine(it.toString())
+                }
+            }
+            blue {
+                append("endmod")
+            }
+            red{
+                append(" %$name")
+            }
+        }
 }

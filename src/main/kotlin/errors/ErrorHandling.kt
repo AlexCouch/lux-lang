@@ -10,6 +10,7 @@ data class Error(
     val message: String,
     val annotations: ArrayList<SourceAnnotation>
 ){
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
             red{
@@ -82,6 +83,7 @@ class ErrorHandling{
         errors += builder.build()
     }
 
+    @ExperimentalStdlibApi
     override fun toString(): String = buildPrettyString {
         errors.forEach {
             println(it.toString())
@@ -89,6 +91,7 @@ class ErrorHandling{
     }
 }
 
+@ExperimentalStdlibApi
 fun main(){
     val errorHandling = ErrorHandling()
     val src = File("test.txt").readText()

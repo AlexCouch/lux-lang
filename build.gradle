@@ -25,6 +25,8 @@ dependencies {
     compile        "io.arrow-kt:arrow-syntax:$arrow_version"
     compile        "io.arrow-kt:arrow-optics:$arrow_version"
 //    kapt           "io.arrow-kt:arrow-meta:$arrow_version"
+    api "ch.qos.logback:logback-classic:1.2.3"
+    api "guru.nidi:graphviz-kotlin:0.17.0"
 }
 
 compileKotlin {

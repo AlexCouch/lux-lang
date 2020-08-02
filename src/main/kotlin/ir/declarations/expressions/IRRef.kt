@@ -27,9 +27,16 @@ class IRRef(
         //No children
     }
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
             append("%$refName")
         }
-
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            red{
+                append("%$refName")
+            }
+        }
 }

@@ -25,9 +25,32 @@ class IRConst(override val name: String,
         expression.transform(transformer, data)
     }
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("$type const %$name = $expression")
+            append("$type")
+            append(" ")
+            append("const")
+            append(" ")
+            append("%$name")
+            append(" = $expression")
+        }
+
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            green {
+                append("$type")
+            }
+            append(" ")
+            blue{
+                append("const")
+            }
+            append(" ")
+            red{
+                append("%$name")
+            }
+            append(" = $expression")
         }
 
 }

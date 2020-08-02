@@ -6,7 +6,7 @@ import arrow.optics.Prism
 class TokenStream(val input: String): Iterator<Option<Token>>{
     private val tokens = arrayListOf<Token>()
     private var idx = -1
-    val current get() = if(idx >= 0) if(hasNext()) tokens[++idx].some() else none() else none()
+    val current get() = if(idx >= 0) tokens[idx].some() else none()
 
     override fun hasNext(): Boolean = idx+1 < tokens.size
     override fun next() = if(hasNext()) tokens[++idx].some() else none()

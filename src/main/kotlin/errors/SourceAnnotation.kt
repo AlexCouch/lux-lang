@@ -3,6 +3,7 @@ package errors
 import buildPrettyString
 
 data class SourceAnnotation(val message: String, val line: ErrorLine, val sourceOrigin: SourceOrigin){
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
             append("${sourceOrigin.start.pos.line}:${sourceOrigin.start.pos.col}")
@@ -20,8 +21,7 @@ data class SourceAnnotation(val message: String, val line: ErrorLine, val source
                 sourceOrigin.start.pos.col >= 10000    -> SourceOrigin.SPACING_OFFSET - 4
                 else                                -> SourceOrigin.SPACING_OFFSET
             }
-            val spacing = lineNumSpace
-            spaced(spacing)
+            spaced(lineNumSpace)
             append("|")
             spaced(SourceOrigin.SPACING_OFFSET)
 //            spaced(spacing + 1 + SourceOrigin.SPACING_OFFSET){
@@ -30,7 +30,19 @@ data class SourceAnnotation(val message: String, val line: ErrorLine, val source
                 indentN(sourceOrigin.start.indentLevel){
                     append(sourceOrigin.toString())
                 }
-                spaced((sourceOrigin.start.pos.line.toString().length + sourceOrigin.start.pos.col.toString().length + spacing + 1 + colNumSpace + 1 + SourceOrigin.SPACING_OFFSET + 1) + line.start.pos.col - sourceOrigin.start.pos.col) {
+                spaced(
+                    (sourceOrigin.start.pos.line.toString().length +
+                            sourceOrigin.start.pos.col.toString().length +
+                            lineNumSpace +
+                            1 +
+                            colNumSpace +
+                            1 +
+                            SourceOrigin.SPACING_OFFSET +
+                            1
+                            + PrettyColors.RED.ansi.length
+                        ) +
+                            line.start.pos.col - sourceOrigin.start.pos.col
+                ) {
                     indentN(sourceOrigin.start.indentLevel) {
                         '~' padded (line.start.offset until line.end.offset)
                     }

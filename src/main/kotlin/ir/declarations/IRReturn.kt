@@ -13,9 +13,18 @@ class IRReturn(val expr: IRExpression, override var parent: IRStatementContainer
         expr.transform(transformer, data)
     }
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("ret $expr")
+            append("ret")
+            append(" $expr")
         }
-
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            blue{
+                append("ret")
+            }
+            append(" $expr")
+        }
 }

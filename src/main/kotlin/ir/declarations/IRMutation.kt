@@ -26,9 +26,26 @@ class IRMutation(
         expression.transform(transformer, data)
     }
 
+    @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("mut %$name = $expression")
+            append("mut")
+            append(" ")
+            append("%$name")
+            append(" = $expression")
+        }
+
+    @ExperimentalStdlibApi
+    fun toPrettyString(): String =
+        buildPrettyString {
+            blue{
+                append("mut")
+            }
+            append(" ")
+            red{
+                append("%$name")
+            }
+            append(" = $expression")
         }
 
 }

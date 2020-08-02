@@ -2,6 +2,8 @@ package ir.declarations
 
 import ir.IRElement
 import ir.IRStatement
+import ir.declarations.expressions.IRConstant
+import ir.declarations.expressions.IRRef
 import ir.types.IRType
 import ir.visitors.IRElementTransformer
 
@@ -10,4 +12,7 @@ interface IRExpression : IRStatement{
 
     override fun <D> transform(transformer: IRElementTransformer<D>, data: D): IRElement =
         accept(transformer, data) as IRExpression
+
+    fun isPrimitive(): Boolean =
+        this is IRConstant<*> || this is IRRef
 }

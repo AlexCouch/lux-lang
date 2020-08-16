@@ -338,7 +338,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 @ExperimentalStdlibApi
                 override fun toString(): String =
                     buildPrettyString{
-                        appendWithNewLine("AnonBlock{")
+                        appendWithNewLine("Block{")
                         indent {
                             appendWithNewLine("startPos: $startPos")
                             appendWithNewLine("endPos: $endPos")

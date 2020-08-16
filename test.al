@@ -8,8 +8,9 @@ def x(a: int, b: int, c: int) -> int:
 	const x = 10
 	return x
 
+const xResult = x(5, 3, 6)
 const result =
-	if x(5, 3, 6):
-		result
+	if xResult:
+		xResult
 	else:
 		5

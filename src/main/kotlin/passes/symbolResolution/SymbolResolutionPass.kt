@@ -2,15 +2,21 @@ package passes.symbolResolution
 
 import ASTVisitor
 import Node
+import arrow.core.extensions.option.monad.flatMap
+import com.sun.org.apache.xpath.internal.ExpressionNode
 import ir.IRElement
 import ir.IRStatement
 import ir.declarations.*
 import ir.declarations.expressions.*
+import ir.declarations.expressions.branching.IRBinaryConditional
 import ir.symbol.IRConstSymbol
 import ir.types.IRSimpleType
 import ir.types.IRType
+import passes.TemporaryNameCreator
 
 class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTable>{
+    val blockNameGen = TemporaryNameCreator()
+
     override fun visitModule(module: Node.ModuleNode, data: SymbolTable): IRModule{
         val irModule = data.declareModule(module.ident.str)
         data.enterScope(irModule)
@@ -51,8 +57,8 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             is Node.StatementNode.PrintNode -> visitPrint(statement, parent, data)
             is Node.StatementNode.DefProcNode -> visitProc(statement, parent, data)
             is Node.StatementNode.LetNode -> visitLet(statement, parent, data)
-            is Node.StatementNode.ExpressionNode.ProcCallNode -> visitProcCall(statement, parent, data)
             is Node.StatementNode.ReturnNode -> visitReturn(statement, parent, data)
+            is Node.StatementNode.ExpressionNode -> visitExpression(statement, parent, data)
             else -> TODO("Working on it")
         }
 
@@ -104,6 +110,24 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
         return data.declareMutation(mutationNode.ident.str, parent, expr)
     }
 
+    override fun visitBinaryConditional(
+        conditional: Node.StatementNode.ExpressionNode.BinaryConditionalNode,
+        parent: IRStatementContainer,
+        data: SymbolTable
+    ): IRBinaryConditional {
+        val condition = conditional.condition
+        val then = conditional.then
+        val otherwise = conditional.otherwise
+
+        return IRBinaryConditional(
+            visitExpression(condition, parent, data),
+            visitBlock(then, parent, data),
+            otherwise.map { visitBlock(it, parent, data) },
+            IRType.default,
+            parent
+        )
+    }
+
     override fun visitExpression(expression: Node.StatementNode.ExpressionNode, parent: IRStatementContainer, data: SymbolTable): IRExpression =
         when(expression){
             is Node.StatementNode.ExpressionNode.IntegerLiteralNode -> visitIntegerLiteral(expression, parent, data)
@@ -111,6 +135,7 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             is Node.StatementNode.ExpressionNode.ReferenceNode -> visitRef(expression, parent, data)
             is Node.StatementNode.ExpressionNode.ProcCallNode -> visitProcCall(expression, parent, data)
             is Node.StatementNode.ExpressionNode.BlockNode -> visitBlock(expression, parent, data)
+            is Node.StatementNode.ExpressionNode.BinaryConditionalNode -> visitBinaryConditional(expression, parent, data)
             else -> TODO()
         }
 
@@ -139,8 +164,12 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
         blockNode: Node.StatementNode.ExpressionNode.BlockNode,
         parent: IRStatementContainer,
         data: SymbolTable
-    ): IRExpression {
-        TODO("Not yet implemented")
+    ): IRBlock {
+        val block = IRBlock(blockNameGen.name, arrayListOf(), parent, IRType.default)
+        block.statements.addAll(blockNode.stmts.map {
+            visitStatement(it, block, data)
+        })
+        return block
     }
 
 }

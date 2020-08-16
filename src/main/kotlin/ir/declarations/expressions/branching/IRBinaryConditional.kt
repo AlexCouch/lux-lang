@@ -1,5 +1,10 @@
 package ir.declarations.expressions.branching
 
+import arrow.core.Option
+import arrow.core.Some
+import arrow.core.extensions.option.monad.flatMap
+import arrow.core.some
+import buildPrettyString
 import ir.declarations.IRExpression
 import ir.declarations.IRStatementContainer
 import ir.declarations.expressions.IRBlock
@@ -8,18 +13,28 @@ import ir.visitors.IRElementTransformer
 import ir.visitors.IRElementVisitor
 
 class IRBinaryConditional(
-    override val condition: IRExpression,
-    override val then: IRBlock,
-    override val otherwise: IRBlock,
+    val condition: IRExpression,
+    val then: IRBlock,
+    val otherwise: Option<IRBlock>,
     override val type: IRType,
     override var parent: IRStatementContainer?
-) : IRBranching {
+) : IRExpression {
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitBinaryConditional(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {
         condition.transform(transformer, data)
         then.transform(transformer, data)
-        otherwise.transform(transformer, data)
+        otherwise.map { it.transform(transformer, data) }
     }
+
+    @ExperimentalStdlibApi
+    override fun toString(): String =
+        buildPrettyString {
+            append("if $condition ")
+            append(then.toString())
+            if(otherwise is Some){
+                append("else ${otherwise.t}")
+            }
+        }
 }

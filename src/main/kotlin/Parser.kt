@@ -1,10 +1,8 @@
 import arrow.core.*
 import arrow.core.Either
-import arrow.core.extensions.option.monad.flatMap
 import errors.ErrorHandling
 import errors.SourceAnnotation
 import errors.buildSourceAnnotation
-import ir.types.IRType
 import kotlin.reflect.typeOf
 
 interface ASTVisitor<P, R, D>{
@@ -24,13 +22,13 @@ interface ASTVisitor<P, R, D>{
     fun visitMutation(mutationNode: Node.StatementNode.ReassignmentNode, parent: P, data: D): R = visitStatement(mutationNode, parent, data)
     fun visitPrint(print: Node.StatementNode.PrintNode, parent: P, data: D): R = visitStatement(print, parent, data)
     fun visitReturn(ret: Node.StatementNode.ReturnNode, parent: P, data: D): R = visitStatement(ret, parent, data)
+    fun visitBinaryConditional(conditional: Node.StatementNode.ExpressionNode.BinaryConditionalNode, parent: P, data: D): R = visitExpression(conditional, parent, data)
 }
 
 class Parser(val ident: String, val errorHandler: ErrorHandling){
 
     fun parsePrint(token: Token, stream: TokenStream): Either<Node.StatementNode.PrintNode, SourceAnnotation>{
-        val expr = parseExpression(stream)
-        return when(expr){
+        return when(val expr = parseExpression(stream)){
             is Either.Left -> Node.StatementNode.PrintNode(expr.a, token.startPos, token.endPos).left()
             is Either.Right -> expr.b.right()
         }
@@ -424,12 +422,16 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
 //        stream.next()
         val body = arrayListOf<Node.StatementNode>()
         if(stream.peek is Some){
+            stream.next()
             while(stream.hasNext() && stream.peek is Some<Token> && (stream.peek as Some<Token>).t.startPos.indentLevel > token.startPos.indentLevel){
                 val statement = parseStatement(stream)
                 if(statement is Either.Left){
                     body += statement.a
                 }else{
                     return (statement as Either.Right).b.right()
+                }
+                if((stream.peek as Some<Token>).t.startPos.indentLevel > token.startPos.indentLevel){
+                    stream.next()
                 }
             }
         }
@@ -821,6 +823,7 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                 is Either.Left -> stmt.a
                 is Either.Right -> return stmt
             })
+            stream.next()
         }
         return Node.StatementNode.ExpressionNode.BlockNode(stmts, token.startPos, (stream.current as Some).t.endPos).left()
     }
@@ -923,12 +926,10 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
     }
 
     fun parseStatement(stream: TokenStream): Either<Node.StatementNode, SourceAnnotation>{
-        return when(stream.peek){
+        return when(val peekNext = stream.current){
             is Some -> {
-                val peekNext = stream.peek
-                when(val n = (stream.peek as Some).t){
+                when(val n = peekNext.t){
                     is Token.IdentifierToken -> {
-                        val next = stream.next()
                         when(n.lexeme) {
                             "var" -> parseVar(n, stream)
                             "let" -> parseLet(n, stream)
@@ -947,10 +948,6 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                                                 val expr = parseExpression(stream)
                                                 if(expr.isLeft()){
                                                     return expr
-                                                }
-                                                val procCall = tryParseProcCall(n, stream)
-                                                if(procCall is Some){
-                                                    return procCall.t.left()
                                                 }
 
                                                 return buildSourceAnnotation {
@@ -1024,6 +1021,7 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
 
     fun parseModule(stream: TokenStream): Option<Node.ModuleNode>{
         val statements = arrayListOf<Node.StatementNode>()
+        stream.next()
         while(stream.hasNext()){
             when(val statement = parseStatement(stream)){
                 is Either.Left -> statements.add(statement.a)
@@ -1035,6 +1033,7 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                     return none()
                 }
             }
+            stream.next()
         }
         return Node.ModuleNode(Node.IdentifierNode(this.ident, TokenPos.default, TokenPos.default), statements).some()
     }

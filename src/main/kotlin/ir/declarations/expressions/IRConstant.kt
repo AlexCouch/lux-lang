@@ -29,6 +29,12 @@ class IRConstant<T>(
             int,
             parent
         )
+        fun string(str: String, parent: IRStatementContainer?) = IRConstant(
+            BuiltinTypes.STR.makeSimpleType(),
+            IRConstantKind.Str,
+            str,
+            parent
+        )
     }
 
     @ExperimentalStdlibApi
@@ -36,8 +42,10 @@ class IRConstant<T>(
         buildPrettyString{
             when(kind){
                 is IRConstantKind.Int -> {
-                    append("int ")
-                    append("$value")
+                    append("int $value")
+                }
+                is IRConstantKind.Str -> {
+                    append("str $value")
                 }
             }
         }
@@ -54,6 +62,14 @@ class IRConstant<T>(
                         append("$value")
                     }
                 }
+                is IRConstantKind.Str -> {
+                    green{
+                        append("str ")
+                    }
+                    yellow {
+                        append("\"$value\"")
+                    }
+                }
             }
         }
 
@@ -61,4 +77,5 @@ class IRConstant<T>(
 
 sealed class IRConstantKind<T>(val asString: String){
     object Int : IRConstantKind<kotlin.Int>("Int")
+    object Str : IRConstantKind<String>("String")
 }

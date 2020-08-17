@@ -6,6 +6,7 @@ import ir.types.IRType
 
 enum class BuiltinTypes(val symbol: String){
     INT("int"),
+    STR("str"),
     DYNAMIC("dyn")
     ;
 

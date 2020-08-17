@@ -111,6 +111,38 @@ class Lexer(val input: String){
                             }
                             tokens + Token.IntegerLiteralToken(buf.toInt(), startPos, currentPos)
                         }
+                        t == '"' -> {
+                            val startPos = currentPos
+                            val buf = buildString {
+                                scan@ while(true){
+                                    val next = advance()
+                                    if(next.isEmpty()) break@scan
+                                    if(next is Some){
+                                        when (next.t) {
+                                            '"' -> break@scan
+                                            else -> append(next.t)
+                                        }
+                                    }
+                                }
+                            }
+                            tokens + Token.StringLiteralToken(buf, startPos, currentPos)
+                        }
+                        t == '\'' -> {
+                            val startPos = currentPos
+                            val buf = buildString {
+                                scan@ while(true){
+                                    val next = advance()
+                                    if(next.isEmpty()) break@scan
+                                    if(next is Some){
+                                        when (next.t) {
+                                            '\'' -> break@scan
+                                            else -> append(next.t)
+                                        }
+                                    }
+                                }
+                            }
+                            tokens + Token.StringLiteralToken(buf, startPos, currentPos)
+                        }
                         t.delimitingToken != Either.None -> {
                             tokens + t.delimitingToken.unwrap()
                             advance()

@@ -442,6 +442,19 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                     }
                 }
             }
+            data class StringLiteralNode(
+                val value: String,
+                override val startPos: TokenPos,
+                override val endPos: TokenPos
+            ): ExpressionNode(startPos, endPos) {
+                override fun assignParents() {}
+
+                @ExperimentalStdlibApi
+                override fun toString(): String =
+                    buildPrettyString {
+                        appendWithNewLine("StringLiteral(\"$value\")")
+                    }
+            }
         }
         data class DefProcNode(
             val ident: IdentifierNode,

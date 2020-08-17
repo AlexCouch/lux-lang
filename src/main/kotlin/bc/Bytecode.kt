@@ -173,17 +173,58 @@ enum class Bytecode{
      *  0016    JUMP        TOP     ;Use the top of the stack for the jump target. This would be bound to name index 6.
      *  0017    CONSTANT    4       ;Push the value of the procedure callsite so we know where to jump back to
      *  0018    PUSH_NAME   6       ;Bind the jump target (instruction 0013) to name 6. This will be read from at the end of the 'average' procedure.
-     *  0019    PUSH_FRAME
-     *  0020    CONSTANT    1
-     *  0021    CONSTANT    2
-     *  0022    CONSTANT    3
-     *  0023    JUMP        0001
+     *  0019    BLOCK               ;Push a new frame for the called procedure. See [BLOCK]
+     *  0020    CONSTANT    1       ;Push the constant at index 1, so it can be bound to the first parameter
+     *  0021    CONSTANT    2       ;Push the constant at index 2, so it can be bound to the second parameter
+     *  0022    CONSTANT    3       ;Push the constant at index 3, so it can be bound to the third parameter
+     *  0023    JUMP        0001    ;Jump to instruction 0001 to start running the procedure
      *  0024    PUSH_NAME   5       ;Bind the top of the stack to variable name at index 5 ('result')
+     *  ```
      */
     JUMP,
 
     /**
-     * Jump if the top item of the stack is Truthy. Truthy means either it exists or it is True
+     * Jump if the top item of the stack is Truthy. Truthy means either it exists or it is True.
+     *
+     * ```
+     *  const result = average(5, 3, 6)
+     *  if result > 10:
+     *      print "Average of 5, 3, and 6 is greater than 10!"
+     *  else:
+     *      print "Oh, well!"
+     * ```
+     * Results in:
+     * ```
+     *  NAMES:
+     *  0: result
+     *  1: __average_call_return_site__ ;Generated internally to keep track of where to return to after average procedure finishes
+     *
+     *  CONSTANT
+     *  0: "Average of 5, 3, and 6 is greater than 10!"
+     *  1: "Oh, well!"
+     *  2: 10
+     *  3: 5
+     *  4: 3
+     *  5: 6
+     *  6: 0008
+     *
+     *  0001    CONSTANT    6       ;Push the value of the procedure callsite so we know where to jump back to
+     *  0002    PUSH_NAME   6       ;Bind the jump target (instruction 0013) to name 6. This will be read from at the end of the 'average' procedure.
+     *  0003    BLOCK               ;Push a new frame for the called procedure
+     *  0004    CONSTANT    1       ;Push the constant at index 1, so it can be bound to the first parameter
+     *  0005    CONSTANT    2       ;Push the constant at index 2, so it can be bound to the second parameter
+     *  0006    CONSTANT    3       ;Push the constant at index 3, so it can be bound to the third parameter
+     *  0007    JUMP        0001    ;Jump to instruction 0001 to start running the procedure
+     *  0008    PUSH_NAME   5       ;Bind the top of the stack to variable name at index 5 ('result')
+     *  0009    CONSTANT    2       ;Push the constant int '10' for truthy comparison
+     *  0010    GREATER             ;Check if the object on the stack at indices n-2 (topmost) is greater than n-1 (second to topmost)
+     *  0011    JTRU        0015    ;Jump if the object on the top of the stack is Truthy
+     *  0012    CONSTANT    0       ;Push the string constant at index 0
+     *  0013    PRINT               ;Print the top of the stack
+     *  0014    RET                 ;Terminate the program
+     *  0015    CONSTANT    1       ;Push the string constant at index 1
+     *  0016    PRINT               ;Print out the top of the stack
+     * ```
      */
     JTRU,
 

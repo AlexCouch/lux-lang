@@ -17,6 +17,7 @@ interface ASTVisitor<P, R, D>{
     fun visitProcCall(procCallNode: Node.StatementNode.ExpressionNode.ProcCallNode, parent: P, data: D): R = visitExpression(procCallNode, parent, data)
     fun visitProcParam(procParamNode: Node.StatementNode.ProcParamNode, parent: P, data: D): R = visitStatement(procParamNode, parent, data)
     fun visitIntegerLiteral(intLiteral: Node.StatementNode.ExpressionNode.IntegerLiteralNode, parent: P, data: D): R = visitStatement(intLiteral, parent, data)
+    fun visitStringLiteral(strLiteral: Node.StatementNode.ExpressionNode.StringLiteralNode, parent: P, data: D): R = visitStatement(strLiteral, parent, data)
     fun visitBinary(binaryNode: Node.StatementNode.ExpressionNode.BinaryNode, parent: P, data: D): R = visitExpression(binaryNode, parent, data)
     fun visitRef(refNode: Node.StatementNode.ExpressionNode.ReferenceNode, parent: P, data: D): R = visitExpression(refNode, parent, data)
     fun visitMutation(mutationNode: Node.StatementNode.ReassignmentNode, parent: P, data: D): R = visitStatement(mutationNode, parent, data)
@@ -105,6 +106,16 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
                                 }
                             }
                         }
+                    }
+                    is Token.StringLiteralToken -> {
+                        val str = Node.StatementNode.ExpressionNode.StringLiteralNode(n.literal, n.startPos, n.endPos)
+//                        val result = tryParseBinary(int, stream)
+//                        if(result is Some){
+//                            result.t.left()
+//                        }else{
+//                            int.left()
+//                        }
+                        str.left()
                     }
                     else -> buildSourceAnnotation {
                         message = "Unidentified expression: ${next.t}"

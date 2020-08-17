@@ -136,8 +136,16 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             is Node.StatementNode.ExpressionNode.ProcCallNode -> visitProcCall(expression, parent, data)
             is Node.StatementNode.ExpressionNode.BlockNode -> visitBlock(expression, parent, data)
             is Node.StatementNode.ExpressionNode.BinaryConditionalNode -> visitBinaryConditional(expression, parent, data)
+            is Node.StatementNode.ExpressionNode.StringLiteralNode -> visitStringLiteral(expression, parent, data)
             else -> TODO()
         }
+
+    override fun visitStringLiteral(
+        strLiteral: Node.StatementNode.ExpressionNode.StringLiteralNode,
+        parent: IRStatementContainer,
+        data: SymbolTable
+    ): IRConstant<String> =
+        IRConstant.string(strLiteral.value, parent)
 
     override fun visitProcCall(procCallNode: Node.StatementNode.ExpressionNode.ProcCallNode, parent: IRStatementContainer, data: SymbolTable): IRExpression =
         data.declareProcCall(procCallNode.refIdent.str, procCallNode.arguments.map { visitExpression(it, parent, data) }.toMutableList() as ArrayList<IRExpression>, parent)

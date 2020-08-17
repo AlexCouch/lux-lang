@@ -15,8 +15,11 @@ sealed class Token(open val startPos: TokenPos, open val endPos: TokenPos){
     data class RAngleToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
     data class CommaToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
     data class ColonToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
+    data class QuoteToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
+    data class ApostToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
 
     data class IntegerLiteralToken(val literal: Int, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
+    data class StringLiteralToken(val literal: String, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
 }
 
 data class Position(val line: Int, val col: Int){

@@ -9,6 +9,7 @@ interface TypeMarker
 interface IRType : TypeMarker{
     companion object{
         val default = BuiltinTypes.DYNAMIC.makeSimpleType()
+        val string = BuiltinTypes.STR.makeSimpleType()
     }
     fun toPrettyString(): String
 }

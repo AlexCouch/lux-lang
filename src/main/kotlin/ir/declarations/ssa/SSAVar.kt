@@ -28,6 +28,10 @@ class SSAVar(
         assignment.transform(transformer, data)
     }
 
+    override fun toPrettyString(): String {
+        TODO("Not yet implemented")
+    }
+
 }
 
 fun IRVarDeclaration<*>.toSSAVar() = SSAVar(this.name, this.expression, this.parent)

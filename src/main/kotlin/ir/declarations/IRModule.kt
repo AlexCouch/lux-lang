@@ -29,7 +29,7 @@ class IRModule(override val name: String, override var parent: IRStatementContai
             append(" %$name")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString{
             blue{
                 append("mod")
@@ -40,7 +40,7 @@ class IRModule(override val name: String, override var parent: IRStatementContai
             }
             indent {
                 statements.forEach {
-                    appendWithNewLine(it.toString())
+                    appendWithNewLine(it.toPrettyString())
                 }
             }
             blue {

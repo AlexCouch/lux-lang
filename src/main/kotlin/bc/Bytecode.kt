@@ -155,11 +155,5 @@ enum class Bytecode{
      * Jump if the top item of the stack is Truthy. Truthy means either it exists or it is True
      */
     JTRU,
-    JNEQ,
-    JEQ,
-    JGEQ,
-    JLEQ,
-    JLES,
-    JGRT,
 
 }

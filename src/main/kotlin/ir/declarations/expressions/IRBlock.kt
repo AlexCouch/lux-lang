@@ -19,16 +19,28 @@ class IRBlock(
     @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            blue {
-            }
             appendWithNewLine("do")
             indent{
                 statements.forEach {
-                    appendWithNewLine(it.toString())
+                    append(it.toString())
                 }
             }
             appendWithNewLine("end")
+        }
+
+    @ExperimentalStdlibApi
+    override fun toPrettyString(): String =
+        buildPrettyString {
             blue {
+                appendWithNewLine("do")
+            }
+            indent{
+                statements.forEach {
+                    appendWithNewLine(it.toPrettyString())
+                }
+            }
+            blue {
+                appendWithNewLine("end")
             }
         }
 }

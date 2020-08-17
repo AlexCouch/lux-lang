@@ -24,4 +24,8 @@ class PhiFunction(
         children.forEach { it.transform(transformer, data) }
     }
 
+    override fun toPrettyString(): String {
+        TODO("Not yet implemented")
+    }
+
 }

@@ -20,11 +20,11 @@ class IRReturn(val expr: IRExpression, override var parent: IRStatementContainer
             append(" $expr")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             blue{
                 append("ret")
             }
-            append(" $expr")
+            append(" ${expr.toPrettyString()}")
         }
 }

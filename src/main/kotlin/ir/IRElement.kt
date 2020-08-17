@@ -10,4 +10,6 @@ interface IRElement{
 
     fun <D> transform(transformer: IRElementTransformer<D>, data: D): IRElement = accept(transformer, data)
     fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D)
+
+    fun toPrettyString(): String
 }

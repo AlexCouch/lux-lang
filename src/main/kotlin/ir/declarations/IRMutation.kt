@@ -36,7 +36,7 @@ class IRMutation(
         }
 
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             blue{
                 append("mut")
@@ -45,7 +45,7 @@ class IRMutation(
             red{
                 append("%$name")
             }
-            append(" = $expression")
+            append(" = ${expression.toPrettyString()}")
         }
 
 }

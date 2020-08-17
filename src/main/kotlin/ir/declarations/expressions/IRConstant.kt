@@ -43,7 +43,7 @@ class IRConstant<T>(
         }
 
     @ExperimentalStdlibApi
-    fun toPrettyString(): String  =
+    override fun toPrettyString(): String  =
         buildPrettyString{
             when(kind){
                 is IRConstantKind.Int -> {

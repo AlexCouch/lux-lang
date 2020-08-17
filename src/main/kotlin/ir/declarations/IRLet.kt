@@ -27,10 +27,10 @@ class IRLet(override val name: String,
     }
 
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString{
             green {
-                append("$type")
+                append(type.toPrettyString())
             }
             append(" ")
             blue{
@@ -40,7 +40,7 @@ class IRLet(override val name: String,
             red{
                 append("%$name")
             }
-            append(" = $expression")
+            append(" = ${expression.toPrettyString()}")
         }
 
     @ExperimentalStdlibApi

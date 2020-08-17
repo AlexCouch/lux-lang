@@ -37,7 +37,7 @@ class IRConst(override val name: String,
         }
 
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             green {
                 append("$type")
@@ -50,7 +50,7 @@ class IRConst(override val name: String,
             red{
                 append("%$name")
             }
-            append(" = $expression")
+            append(" = ${expression.toPrettyString()}")
         }
 
 }

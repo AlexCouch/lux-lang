@@ -40,16 +40,16 @@ class IRBinaryPlus(
     @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("div")
+            append("add")
             append(" $left, $right")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             blue{
-                append("div")
+                append("add")
             }
-            append(" $left, $right")
+            append(" ${left.toPrettyString()}, ${right.toPrettyString()}")
         }
 }
 
@@ -68,16 +68,16 @@ class IRBinaryMinus(
     @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("div")
+            append("sub")
             append(" $left, $right")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             blue{
-                append("div")
+                append("sub")
             }
-            append(" $left, $right")
+            append(" ${left.toPrettyString()}, ${right.toPrettyString()}")
         }
 }
 
@@ -96,16 +96,16 @@ class IRBinaryMult(
     @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("div")
+            append("mul")
             append(" $left, $right")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             blue{
-                append("div")
+                append("mul")
             }
-            append(" $left, $right")
+            append(" ${left.toPrettyString()}, ${right.toPrettyString()}")
         }
 }
 
@@ -128,11 +128,11 @@ class IRBinaryDiv(
             append(" $left, $right")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             blue{
                 append("div")
             }
-            append(" $left, $right")
+            append(" ${left.toPrettyString()}, ${right.toPrettyString()}")
         }
 }

@@ -37,4 +37,21 @@ class IRBinaryConditional(
                 append("else ${otherwise.t}")
             }
         }
+
+    @ExperimentalStdlibApi
+    override fun toPrettyString(): String =
+        buildPrettyString {
+            blue {
+                append("if ")
+            }
+            append(condition.toPrettyString())
+            spaced(0)
+            append(then.toPrettyString())
+            if(otherwise is Some){
+                blue {
+                    append("else ")
+                }
+                append(otherwise.t.toPrettyString())
+            }
+        }
 }

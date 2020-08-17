@@ -57,7 +57,7 @@ fun main(args: Array<String>){
     val ssaTransformer = PreSSATransformation()
     val ssaSymbolTable = SymbolTable()
     val ssaIR = ssaTransformer.visitModule(typeCheckedModule, ssaSymbolTable)
-    println(ssaIR)
+    println(ssaIR.toPrettyString())
     val graph = CFG()
     val cfgPass = CFGPass()
     val cfgModule = cfgPass.visitModule(ssaIR, graph)

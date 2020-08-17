@@ -29,4 +29,7 @@ class BasicBlock(
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
         visitor.visitBasicBlock(this, data)
 
+    override fun toPrettyString(): String {
+        TODO("Not yet implemented")
+    }
 }

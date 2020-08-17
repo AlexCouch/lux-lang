@@ -43,7 +43,7 @@ class IRProcCall(
             append(")")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString{
             blue {
                 append("call")
@@ -54,7 +54,7 @@ class IRProcCall(
             }
             append("(")
             arguments.forEachIndexed { i, it ->
-                append(it.toString())
+                append(it.toPrettyString())
                 if(i < arguments.size - 1) append(", ")
             }
             append(")")

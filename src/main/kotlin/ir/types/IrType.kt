@@ -10,6 +10,7 @@ interface IRType : TypeMarker{
     companion object{
         val default = BuiltinTypes.DYNAMIC.makeSimpleType()
     }
+    fun toPrettyString(): String
 }
 interface IRSimpleTypeMarker: TypeMarker
 interface IRDynamicTypeMarker: TypeMarker
@@ -20,6 +21,14 @@ class IRSimpleType(val symbol: String) : IRType, IRSimpleTypeMarker{
     override fun toString(): String =
         buildPrettyString{
             append(symbol)
+        }
+
+    @ExperimentalStdlibApi
+    override fun toPrettyString(): String =
+        buildPrettyString{
+            green{
+                append(symbol)
+            }
         }
 
     override fun equals(other: Any?): Boolean =

@@ -33,7 +33,7 @@ class IRRef(
             append("%$refName")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             red{
                 append("%$refName")

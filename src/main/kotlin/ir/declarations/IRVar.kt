@@ -26,7 +26,7 @@ class IRVar(
     }
 
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             green {
                 append("$type")
@@ -39,7 +39,7 @@ class IRVar(
             red{
                 append("%$name")
             }
-            append(" = $expression")
+            append(" = ${expression.toPrettyString()}")
         }
     @ExperimentalStdlibApi
     override fun toString(): String =

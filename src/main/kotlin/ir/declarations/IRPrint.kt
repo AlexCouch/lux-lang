@@ -13,12 +13,12 @@ class IRPrint(val expression: IRExpression, override var parent: IRStatementCont
     }
 
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString{
             blue{
                 append("print")
             }
-            append(" $expression")
+            append(" ${expression.toPrettyString()}")
         }
 
     @ExperimentalStdlibApi

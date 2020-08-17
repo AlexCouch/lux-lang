@@ -55,7 +55,7 @@ class IRProc(
             appendWithNewLine("%$name")
         }
     @ExperimentalStdlibApi
-    fun toPrettyString(): String =
+    override fun toPrettyString(): String =
         buildPrettyString {
             appendWithNewLine("")
             green {
@@ -71,13 +71,7 @@ class IRProc(
             }
             append("(")
             params.forEachIndexed { i, it ->
-                green{
-                    append("${it.type}")
-                }
-                append(" ")
-                red {
-                    append("%${it.name}")
-                }
+                append(it.toPrettyString())
                 if(i < params.size - 1) append(", ")
             }
             append(") ")
@@ -86,7 +80,7 @@ class IRProc(
             }
             indent {
                 statements.forEach {
-                    appendWithNewLine(it.toString())
+                    appendWithNewLine(it.toPrettyString())
                 }
             }
             blue{
@@ -119,4 +113,16 @@ class IRProcParam(
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {
         //No children
     }
+
+    @ExperimentalStdlibApi
+    override fun toPrettyString(): String =
+        buildPrettyString {
+            green{
+                append(type.toPrettyString())
+            }
+            append(" ")
+            red {
+                append("%${name}")
+            }
+        }
 }

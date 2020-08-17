@@ -2,19 +2,16 @@ package bc
 
 enum class Bytecode{
     /**
-     * Declare a variable, whether on the stack or heap has to do with the proceeding bytecode instructions.
-     * This instruction is a context switcher, and tells the vm to switch to the variable declaration context.
+     * Push a name to be bound to the object on the top of the stack. This then creates a variable on the stack,
+     * which may be read from or written to. This takes an index to the names store.
      *
-     * Varables come in two parts:
-     *      - Variable Object
-     *          - This is the header of the object, which contains the variable's signature, source location, etc.
-     *          - This will also be encoded in bytecode as such:
-     *              [VAR] (var_name) [TYPE] (type_name) ([HEAP|STACK]) [ASSIGNMENT]
-     *      - Assigned Expression
-     *          - See #Expressions
+     * [PUSH_NAME] nameidx
+     *
+     * This will push a new name object to the top of the stack, which is immediately bound to the value at the top of
+     * the stack.
      *
      */
-    VAR,
+    PUSH_NAME,
 
     /**
      * This will create an object on the heap. It is not required for an object to be on the heap, but typically, this
@@ -24,105 +21,81 @@ enum class Bytecode{
 
     /**
      * A stack variable allocation.
-     * This will create an object on the stack. To reference this, observers are required to read without destroying the object.
-     * See [OBSERVE]
+     * This will create an object on the stack. References to this cannot be made but instead must be done through
+     * observers.
+     *
+     * WARNING: Observers have not been implemented yet!! -AC 8/17
+     *
+     * An observer is a bytecode transformer that is written in source code, but is treated as a compiletime transformer
+     * so that the bytecode generator is influenced to produce a different set of opcodes as opposed to the standard
+     * READ instructions that are always generated without an observer.
+     *
+     * Note: References created by [REF] have observers built in, called RefObserver, which allows for the use of
+     * references for reading a value. They are always consumed and replaced with a new reference. In fact, to improve
+     * performance, they will never be consumed.
      */
     STACK,
 
     /**
-     * Used to read from an object on the stack without consume it. This will take some observer object as an argument,
-     * and that observer is a procedure that will tell the VM how to observe the given object, as the second argument.
+     * Reads from a given variable. The first operand of this opcode is the index of the name being referenced.
      *
-     * [OBSERVE] observer varident
+     * The result of this opcode is the object bound to the given name is moved to the top of the stack, where any
+     * subsequent instruction will use it.
+     *
+     * Example:
+     * READ 1 ;Move the object bound to name index 1 to the top of the stack
+     * READ 2 ;Move the object bound to name index 2 to the top of the stack
+     * ADD    ;Add them together
      */
-    OBSERVE,
+    READ,
 
     /**
-     * A [VAR] subinstruction, used to declare the assignment of a variable.
-     * This sbcontext makes it clearer and faster to create and verify variable objects.
+     * This is a four step opcode. This will use an initial READ followed by an object acquisition (the process of
+     * acquiring an object onto the top of the stack, whether it'd be a new push, a [READ], a [DUP], etc) and then
+     * SWAP-ping the bound object with the unbound object. Lastly, it pops the previously bound object off the stack.
      *
-     * [VAR] ;see VAR; [ASSIGNMENT] expression
+     * ```
+     * let x = 5
+     * x = 10 #Instructions below are on this line
+     * ```
+     *
+     * Step1: READ 0        ;0 is the index where the name 'x' is placed.
+     * Step2: STACK CONST 1 ;1 is the index in the constant pool where 10 is placed. 0 is 5
+     * Step3: SWAP
+     * Step4: POP
+     *
+     * The result is the variable 'x' bound to integer '5' will be READ (moved to the top of the stack), and swapped with
+     * a newly pushed constant integer '10'. The two objects are swapped so that 'x' is now bound to '10' and '5' is
+     * popped off the stack.
      */
-    ASSIGNMENT,
-
-    /**
-     * A [VAR] subinstruction, used to declare a new variable that replaces the subject with a new version of itself.
-     * This subcontext is used to mutate the stack or heap contents that will pull the given [VAR] object to the top
-     * of the stack, and change its assigned expression.
-     *
-     * For heap variables, this will pull the variable's object to the top of the stack, then replace itself assigned
-     * pointer to a new pointer on the heap. During this, the original pointer will be used to consume the original object
-     * on the heap such that it is used during the transformation.
-     *
-     * A variable object whose assigned object is an Int(5). If we are to mutate this as an additive transformation,
-     * we would get the morphisms:
-     *      A : T
-     *      B : A
-     *      C : A + B
-     *      A -> B -> C
-     *          where A + B yields a new object, C,
-     *              whose composition can only be described as an adjoint relation between A and B
-     *              For Natural or Real numbers, this yields the following typed morphism:
-     *              A -> A -> A
-     *              Because the type of A, B, and C are all of type A.
-     *              A ~= B ~= B
-     *              This also yield the following type triad:
-     *                      A
-     *                     / \
-     *                    B - C
-     *              This is because the types of A, B, and C are all the same type or polymorphic to each other.
-     *              The consumption of Object A during the construction of object B, not only consumes A but also consumes B.
-     *              The consumption morphism looks like this:
-     *              A -> B -> C -> Neg B -> Neg A
-     *
-     *  [MUT] ident expression
-     */
-    MUT,
-
-    /**
-     * Declare a procedure, which is then encapsulated into a ProcBox, which contains other information such as:
-     *  - Source Location
-     *  - Deserialized Signature -- The signature is in bytecode form, and is deserialized so that it's easier to interpret on demand.
-     *  - Body
-     *
-     *  [PROC] source_location ([PARAM] pident [TYPE] tyident)* [TYPE] retype [BLOCK]
-     */
-    PROC,
-
-    /**
-     * The start of a procedure parameter. See [PROC] for parameter signature.
-     * The VM will take the index of the param on the stack and bind it to the parameter.
-     *
-     * If there are 3 parameters, as a list called P, and the VM stack called S, and a top index (len(S)-1) called T,
-     * when T = 10,
-     * then P[0] = S[T-(3-1)+0] => S[T-2+0] => S[T-2] => S[8]
-     *      P[1] = S[T-(3-1)+1] => S[T-2+1] => S[T-1] => S[9]
-     *      P[2] = S[T-(3-1)+2] => S[T-2+2] => S[T]   => S[10]
-     *      and so forth
-     * ergo,
-     *      P[i] = S[T-(len(P)-1)+i]
-     */
-    PARAM,
-
-
-    /**
-     * Use to indicate a type annotation, which will then be used to describe the construct at hand.
-     * This is used in VAR and PROC to specify what type something is.
-     * For VAR it's the assignment, for PROC is the return expression
-     */
-    TYPE,
+    WRITE,
 
     //              #Expressions
 
     /**
-     * An expressive instruction used to acquire a new reference to a specified object.
-     * The result depends on whether the variable's assigned object is on the heap or on the stack.
-     * If it's on the heap, a new reference object will be made and pushed to the top of the stack.
-     * If it's on the stack, that object will be moved to the top of the stack.
+     * References an object by creating a new Reference object, and pushing it onto the stack.
+     * The only way the Reference object can be on the heap is if it's bound to a heap variable (const or var).
+     * For it to be on the heap, it must be preceded by [HEAP], otherwise, it goes on the stack.
      *
-     * [REF] refident
+     * References are always used when referencing heap variables (const, var). Any time a read/write is made on one,
+     * it always goes through a Reference. When a const/var is made, it's assigned value is a Reference to the
+     * heap object.
+     *
+     * This opcode is always proceeded by an index in the name store for the variable being referenced.
+     * [REF] nameidx
      */
     REF,
+
+    /**
+     * Duplicate the object bound to the given name. The first operand of this opcode is an index into the name store
+     * of the variable being duplicated.
+     *
+     * Some observations will transform a variable's READ into other instructions. It's possible for an observer to
+     * generate a [DUP] opcode instead of a [READ].
+     *
+     * [DUP] nameidx
+     */
+    DUP,
 
     /**
      * Tell the virtual machine to push a new frame onto the stack. All things with bodies, such as conditionals,
@@ -134,8 +107,6 @@ enum class Bytecode{
      */
     BLOCK,
 
-    CALL,
-
     ADD,
     SUB,
     MUL,
@@ -144,10 +115,70 @@ enum class Bytecode{
     //              #JUMPS
     /**
      * Static jump. This will always result in jumping to another block of code.
-     * This is used in procedure calls, when we load the called procedure's metadata, and use it to statically jump
-     * to the start of the procedure's body. This is also used for jumping back to the caller after a return.
+     * This is used in procedure calls, when we generate during codegen the location of the procedure's bytecode index,
+     * and use it to statically jump to the start of the procedure's body. This is also used for statically jumping
+     * passed alternative branches of a conditional at the end of the consequence branch.
      *
-     * See [CALL] and [RETURN] for more info.
+     * Procedure calls use this along side other instructions to give the effect of calling a procedure.
+     *
+     * Step1: A new integer constant object is pushed to the top of the stack.
+     * Step2: A new frame object is pushed to the top of the stack, where all subsequent objects are dependent on.
+     *          When this frame gets popped at the end of the procedure, all the child objects of the frame are popped
+     *          as well.
+     * Step3: The arguments for the procedure are put at the top of the stack.
+     * Step4: A static jump to the start of the procedure is invoked.
+     * Step5 (optional): If there are parameters, then new [PUSH_NAME] instructions are invoked.
+     *
+     * ```
+     *  def average(x: int, y: int, z: int) -> int:
+     *      let sum = x + y + z
+     *      return sum / 3
+     *
+     *  const result = average(5, 3, 6)
+     * ```
+     * Results in:
+     * ```
+     *  NAMES:
+     *  0: average
+     *  1: x
+     *  2: y
+     *  3: z
+     *  4: sum
+     *  5: result
+     *  6: __average_call_return_site__ ;Generated internally to keep track of where to return to after average procedure finishes
+     *  7: __0__
+     *
+     *  CONSTANTS:
+     *  0: 3
+     *  1: 5
+     *  2: 3
+     *  3: 6
+     *  4: 0023
+     *
+     *  0001    PUSH_NAME   1       ;Push name for parameter 'x'
+     *  0002    PUSH_NAME   2       ;Push name for parameter 'y'
+     *  0003    PUSH_NAME   3       ;Push name for parameter 'z'
+     *  0004    READ        2       ;Read parameter 'y'
+     *  0005    READ        3       ;Read parameter 'z'
+     *  0006    ADD                 ;Add 'y' and 'z'
+     *  0007    PUSH_NAME   7       ;Push name for variable '__0__' which is a temp variable for y + z
+     *  0008    READ        1       ;Read parameter 'x'
+     *  0009    READ        7       ;Read '__0__' which hold the temporary value of y + z
+     *  0010    ADD                 ;Add __0__ and x (x + %0)
+     *  0011    PUSH_NAME   4       ;Push name for variable 'result'. Bind it to the top of the stack (x + %0)
+     *  0012    CONSTANT    0       ;Push constant int '3'
+     *  0013    READ        4       ;Read from variable 'result'
+     *  0014    DIV                 ;Divide 'result' by constant int '3' and push to the top of the stack
+     *  0015    READ        6       ;Read the internal variable in name store at index 6
+     *  0016    JUMP        TOP     ;Use the top of the stack for the jump target. This would be bound to name index 6.
+     *  0017    CONSTANT    4       ;Push the value of the procedure callsite so we know where to jump back to
+     *  0018    PUSH_NAME   6       ;Bind the jump target (instruction 0013) to name 6. This will be read from at the end of the 'average' procedure.
+     *  0019    PUSH_FRAME
+     *  0020    CONSTANT    1
+     *  0021    CONSTANT    2
+     *  0022    CONSTANT    3
+     *  0023    JUMP        0001
+     *  0024    PUSH_NAME   5       ;Bind the top of the stack to variable name at index 5 ('result')
      */
     JUMP,
 

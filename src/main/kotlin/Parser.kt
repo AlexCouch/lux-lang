@@ -784,6 +784,8 @@ class Parser(val ident: String, val errorHandler: ErrorHandling){
         if(stream.peek is Some){
             val peek = stream.peek as Some
             if(peek.t !is Token.LParenToken) return none()
+        }else{
+            return none()
         }
         val args = arrayListOf<Node.StatementNode.ExpressionNode>()
         stream.next()

@@ -41,6 +41,7 @@ class PreSSATransformation : IRElementTransformer<SymbolTable>{
         val irProc = data.declareProc(element.name, element.returnType, element.parent!!)
         irProc.params.addAll(element.params)
         element.convertChildrenToSSAForm(irProc, data)
+        tempNameCounter.reset()
         return irProc
     }
 

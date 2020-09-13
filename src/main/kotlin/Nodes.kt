@@ -277,49 +277,53 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 }
             }
 
-            data class BinaryConditionalNode(
-                val condition: ExpressionNode,
-                val then: BlockNode,
-                val otherwise: Option<BlockNode>,
-                override val startPos: TokenPos,
-                override val endPos: TokenPos
-            ): ExpressionNode(startPos, endPos) {
-                override fun assignParents() {
-                    condition.parent = this
-                    condition.assignParents()
-                    then.parent = this
-                    then.assignParents()
-                    if(otherwise is Some){
-                        otherwise.t.parent = this
-                        otherwise.t.assignParents()
-                    }
-                }
-            }
-
-            data class WhenConditionalNode(
-                val branches: ArrayList<ConditionalBranchNode>,
+            sealed class ConditionalBranchingNode(
                 override val startPos: TokenPos,
                 override val endPos: TokenPos
             ): ExpressionNode(startPos, endPos){
-                override fun assignParents() {
-                    branches.forEach {
-                        it.parent = this
-                        it.assignParents()
+
+                data class BinaryConditionalNode(
+                    val condition: ExpressionNode,
+                    val then: BlockNode,
+                    val otherwise: Option<BlockNode>,
+                    override val startPos: TokenPos,
+                    override val endPos: TokenPos
+                ): ConditionalBranchingNode(startPos, endPos) {
+                    override fun assignParents() {
+                        condition.parent = this
+                        condition.assignParents()
+                        then.parent = this
+                        then.assignParents()
+                        if(otherwise is Some){
+                            otherwise.t.parent = this
+                            otherwise.t.assignParents()
+                        }
                     }
                 }
-            }
-
-            data class ConditionalBranchNode(
-                val condition: ExpressionNode,
-                val then: BlockNode,
-                override val startPos: TokenPos,
-                override val endPos: TokenPos
-            ): ExpressionNode(startPos, endPos){
-                override fun assignParents() {
-                    condition.parent = this
-                    condition.assignParents()
-                    then.parent = this
-                    then.assignParents()
+                data class WhenConditionalNode(
+                    val branches: ArrayList<ConditionalBranchNode>,
+                    override val startPos: TokenPos,
+                    override val endPos: TokenPos
+                ): ConditionalBranchingNode(startPos, endPos){
+                    override fun assignParents() {
+                        branches.forEach {
+                            it.parent = this
+                            it.assignParents()
+                        }
+                    }
+                }
+                data class ConditionalBranchNode(
+                    val condition: ExpressionNode,
+                    val then: BlockNode,
+                    override val startPos: TokenPos,
+                    override val endPos: TokenPos
+                ): ConditionalBranchingNode(startPos, endPos){
+                    override fun assignParents() {
+                        condition.parent = this
+                        condition.assignParents()
+                        then.parent = this
+                        then.assignParents()
+                    }
                 }
             }
 

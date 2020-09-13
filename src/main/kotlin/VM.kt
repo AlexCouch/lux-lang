@@ -132,8 +132,8 @@ class VM(val moduleName: String){
                 evalProc(proc)
             }
             is Node.StatementNode.ExpressionNode.BlockNode -> TODO()
-            is Node.StatementNode.ExpressionNode.BinaryConditionalNode -> TODO()
-            is Node.StatementNode.ExpressionNode.WhenConditionalNode -> TODO()
+            is Node.StatementNode.ExpressionNode.ConditionalBranchingNode.BinaryConditionalNode -> TODO()
+            is Node.StatementNode.ExpressionNode.ConditionalBranchingNode.WhenConditionalNode -> TODO()
             else -> TODO()
         }
     }

@@ -1,6 +1,6 @@
 package passes.symbolResolution
 
-import ASTVisitor
+import parser.ASTVisitor
 import Node
 import arrow.core.extensions.option.monad.flatMap
 import com.sun.org.apache.xpath.internal.ExpressionNode
@@ -111,7 +111,7 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
     }
 
     override fun visitBinaryConditional(
-        conditional: Node.StatementNode.ExpressionNode.BinaryConditionalNode,
+        conditional: Node.StatementNode.ExpressionNode.ConditionalBranchingNode.BinaryConditionalNode,
         parent: IRStatementContainer,
         data: SymbolTable
     ): IRBinaryConditional {
@@ -135,7 +135,7 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             is Node.StatementNode.ExpressionNode.ReferenceNode -> visitRef(expression, parent, data)
             is Node.StatementNode.ExpressionNode.ProcCallNode -> visitProcCall(expression, parent, data)
             is Node.StatementNode.ExpressionNode.BlockNode -> visitBlock(expression, parent, data)
-            is Node.StatementNode.ExpressionNode.BinaryConditionalNode -> visitBinaryConditional(expression, parent, data)
+            is Node.StatementNode.ExpressionNode.ConditionalBranchingNode.BinaryConditionalNode -> visitBinaryConditional(expression, parent, data)
             is Node.StatementNode.ExpressionNode.StringLiteralNode -> visitStringLiteral(expression, parent, data)
             else -> TODO()
         }

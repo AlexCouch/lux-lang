@@ -34,17 +34,12 @@ data class SourceAnnotation(val message: String, val line: ErrorLine, val source
                     (sourceOrigin.start.pos.line.toString().length +
                             sourceOrigin.start.pos.col.toString().length +
                             lineNumSpace +
-                            1 +
-                            colNumSpace +
-                            1 +
-                            SourceOrigin.SPACING_OFFSET +
-                            1
                             + PrettyColors.RED.ansi.length
                         ) +
-                            line.start.pos.col - sourceOrigin.start.pos.col
+                            line.start.pos.col
                 ) {
                     indentN(sourceOrigin.start.indentLevel) {
-                        '~' padded (line.start.offset until line.end.offset)
+                        '~' padded (line.end.offset .. line.start.offset)
                     }
                 }
                 appendWithNewLine(" $message")

@@ -1,6 +1,7 @@
 import arrow.core.None
 import arrow.core.Some
 import errors.ErrorHandling
+import parser.ModuleParser
 import passes.PreSSATransformation
 import passes.cfg.CFG
 import passes.cfg.CFGPass
@@ -36,9 +37,9 @@ fun main(args: Array<String>){
     val src = file.readText()
     val errorHandler = ErrorHandling()
     val lexer = Lexer(src)
-    val parser = Parser(file.nameWithoutExtension, errorHandler)
+    val parser = ModuleParser(file.nameWithoutExtension, errorHandler)
     val tokenstream = lexer.tokenize()
-    val moduleAST = when(val ast = parser.parseModule(tokenstream)){
+    val moduleAST = when(val ast = parser.parse(tokenstream)){
         is Some -> ast.t
         is None -> {
             println(errorHandler)
@@ -52,14 +53,16 @@ fun main(args: Array<String>){
     val symbolTable = SymbolTable()
     val astLowering = SymbolResolutionPass()
     val ir = astLowering.visitModule(moduleAST, symbolTable)
+//    println(ir.toPrettyString())
     val typeck = TypeCheckingPass()
     val typeCheckedModule = typeck.visitModule(ir, symbolTable)
+//    println(typeCheckedModule.toPrettyString())
     val ssaTransformer = PreSSATransformation()
     val ssaSymbolTable = SymbolTable()
     val ssaIR = ssaTransformer.visitModule(typeCheckedModule, ssaSymbolTable)
     println(ssaIR.toPrettyString())
-    val graph = CFG()
-    val cfgPass = CFGPass()
-    val cfgModule = cfgPass.visitModule(ssaIR, graph)
+//    val graph = CFG()
+//    val cfgPass = CFGPass()
+//    val cfgModule = cfgPass.visitModule(ssaIR, graph)
 //    graph.toGraph()
 }

@@ -8,11 +8,15 @@ data class SourceOrigin(val start: TokenPos, val end: TokenPos, val source: Stri
     override fun toString(): String = buildPrettyString {
         source.lines()
             .drop(start.pos.line)
-            .reversed()
-            .drop(end.pos.line - start.pos.line)
             .filter {
                 it.isNotBlank()
-            }.forEach {
+            }
+            .take(if(end.pos.line - start.pos.line <= 0){
+                    1
+                }else{
+                end.pos.line - start.pos.line
+            })
+            .forEach {
                 appendWithNewLine(it)
             }
     }

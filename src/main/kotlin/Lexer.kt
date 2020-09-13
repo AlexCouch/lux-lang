@@ -46,9 +46,8 @@ class Lexer(val input: String){
 
     fun tokenize(): TokenStream{
         val tokens = TokenStream(input)
-        while(scanner.hasNext() || scanner.current.isDefined()){
-            val c = scanner.current
-            when(c){
+        while(scanner.current.isDefined()){
+            when(val c = scanner.current){
                 is Some -> {
                     val t = c.t
                     when{

@@ -1,25 +1,145 @@
 sealed class Token(open val startPos: TokenPos, open val endPos: TokenPos){
-    data class IdentifierToken(val lexeme: String, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class EqualToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class PlusToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class HyphenToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class StarToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class FSlashToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class LParenToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class RParenToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class LBracketToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class RBracketToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class LCurlyToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class RCurlyToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class LAngleToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class RAngleToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class CommaToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class ColonToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class QuoteToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class ApostToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
+    data class IdentifierToken(val lexeme: String, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(lexeme)
+            }
+    }
+    data class EqualToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('=')
+            }
+    }
+    data class PlusToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('+')
+            }
+    }
+    data class HyphenToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('-')
+            }
+    }
+    data class StarToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('*')
+            }
+    }
+    data class FSlashToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('/')
+            }
+    }
+    data class LParenToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('(')
+            }
+    }
+    data class RParenToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(')')
+            }
+    }
+    data class LBracketToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('[')
+            }
+    }
+    data class RBracketToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(']')
+            }
+    }
+    data class LCurlyToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('{')
+            }
+    }
+    data class RCurlyToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('}')
+            }
+    }
+    data class LAngleToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('<')
+            }
+    }
+    data class RAngleToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('>')
+            }
+    }
+    data class CommaToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(',')
+            }
+    }
+    data class ColonToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(':')
+            }
+    }
+    data class QuoteToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('"')
+            }
+    }
+    data class ApostToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('\'')
+            }
+    }
 
-    data class IntegerLiteralToken(val literal: Int, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
-    data class StringLiteralToken(val literal: String, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos)
+    data class IntegerLiteralToken(val literal: Int, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(literal)
+            }
+    }
+    data class StringLiteralToken(val literal: String, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(literal)
+            }
+    }
 }
 
 data class Position(val line: Int, val col: Int){

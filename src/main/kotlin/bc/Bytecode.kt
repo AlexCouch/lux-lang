@@ -40,12 +40,16 @@ enum class Bytecode{
      * Reads from a given variable. The first operand of this opcode is the index of the name being referenced.
      *
      * The result of this opcode is the object bound to the given name is moved to the top of the stack, where any
-     * subsequent instruction will use it.
+     * subsequent instruction will use it. Any interactive instruction (arithmetic instructions, swap, write, etc) will
+     * result in the immediate destruction of the bound object. To avoid this, it recommended that bytecode generators
+     * generate alternative instructions depending on the situation. This gives any bytecode generator the opportunity
+     * to implement features not bound to the original language. So classes are not required, and neither are functions,
+     * procedures, etc.
      *
      * Example:
      * READ 1 ;Move the object bound to name index 1 to the top of the stack
      * READ 2 ;Move the object bound to name index 2 to the top of the stack
-     * ADD    ;Add them together
+     * ADD    ;Add them together, thus destroying both the objects and replacing them with a new one, their sum
      */
     READ,
 
@@ -66,7 +70,7 @@ enum class Bytecode{
      *
      * The result is the variable 'x' bound to integer '5' will be READ (moved to the top of the stack), and swapped with
      * a newly pushed constant integer '10'. The two objects are swapped so that 'x' is now bound to '10' and '5' is
-     * popped off the stack.
+     * popped off the stack, due to the initial READ instruction on that bound '5' object.
      */
     WRITE,
 

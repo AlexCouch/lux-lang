@@ -66,11 +66,11 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
         data: SymbolTable
     ): IRReturn {
         val expr = visitExpression(ret.expr, parent, data)
-        return IRReturn(expr, parent)
+        return IRReturn(expr, parent, ret.startPos)
     }
 
     override fun visitProc(procNode: Node.StatementNode.DefProcNode, parent: IRStatementContainer, data: SymbolTable): IRProc{
-        val irProc = data.declareProc(procNode.ident.str, IRSimpleType(procNode.returnType.str), parent)
+        val irProc = data.declareProc(procNode.ident.str, IRSimpleType(procNode.returnType.str), parent, procNode.startPos)
         data.enterScope(irProc)
         procNode.params.forEach {
             visitProcParam(it, irProc, data)
@@ -83,29 +83,29 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
     }
 
     override fun visitProcParam(procParamNode: Node.StatementNode.ProcParamNode, parent: IRStatementContainer, data: SymbolTable): IRProcParam =
-        data.declareProcParam(parent.name, procParamNode.ident.str, IRSimpleType(procParamNode.type.str))
+        data.declareProcParam(parent.name, procParamNode.ident.str, IRSimpleType(procParamNode.type.str), procParamNode.startPos)
 
     override fun visitPrint(print: Node.StatementNode.PrintNode, parent: IRStatementContainer, data: SymbolTable): IRPrint =
-        IRPrint(visitExpression(print.expr, parent, data), parent)
+        IRPrint(visitExpression(print.expr, parent, data), parent, print.startPos)
 
     override fun visitConst(constNode: Node.StatementNode.ConstNode, parent: IRStatementContainer, data: SymbolTable): IRConst{
         val expr = visitExpression(constNode.expression, parent, data)
-        return data.declareConst(constNode.identifier.str, IRSimpleType(constNode.type.str), expr, parent)
+        return data.declareConst(constNode.identifier.str, IRSimpleType(constNode.type.str), expr, parent, constNode.startPos)
     }
 
     override fun visitLet(legacyVariable: Node.StatementNode.LegacyVariableNode, parent: IRStatementContainer, data: SymbolTable): IRLet{
         val expr = visitExpression(legacyVariable.expression, parent, data)
-        return data.declareLet(legacyVariable.identifier.str, IRSimpleType(legacyVariable.type.str), expr, parent)
+        return data.declareLet(legacyVariable.identifier.str, IRSimpleType(legacyVariable.type.str), expr, parent, legacyVariable.startPos)
     }
 
     override fun visitVar(varNode: Node.StatementNode.VarNode, parent: IRStatementContainer, data: SymbolTable): IRVar{
         val expr = visitExpression(varNode.expression, parent, data)
-        return data.declareVariable(varNode.identifier.str, IRSimpleType(varNode.type.str), expr, parent)
+        return data.declareVariable(varNode.identifier.str, IRSimpleType(varNode.type.str), expr, parent, varNode.startPos)
     }
 
     override fun visitMutation(mutationNode: Node.StatementNode.ReassignmentNode, parent: IRStatementContainer, data: SymbolTable): IRMutation{
         val expr = visitExpression(mutationNode.expr, parent, data)
-        return data.declareMutation(mutationNode.ident.str, parent, expr)
+        return data.declareMutation(mutationNode.ident.str, parent, expr, mutationNode.startPos)
     }
 
     override fun visitBinaryConditional(
@@ -124,7 +124,8 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
                     visitBlock(then, parent, data),
                     otherwise.map { visitBlock(it, parent, data) },
                     IRType.default,
-                    parent
+                    parent,
+                    conditional.startPos
                 )
             }
             is Node.StatementNode.ExpressionNode.ConditionalBranchingNode.ConditionalBranchNode -> {
@@ -136,7 +137,8 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
                     visitBlock(then, parent, data),
                     none(),
                     IRType.default,
-                    parent
+                    parent,
+                    conditional.startPos
                 )
             }
             else -> TODO()
@@ -160,35 +162,35 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
         parent: IRStatementContainer,
         data: SymbolTable
     ): IRConstant<String> =
-        IRConstant.string(strLiteral.value, parent)
+        IRConstant.string(strLiteral.value, parent, strLiteral.startPos)
 
     override fun visitProcCall(procCallNode: Node.StatementNode.ExpressionNode.ProcCallNode, parent: IRStatementContainer, data: SymbolTable): IRExpression =
-        data.declareProcCall(procCallNode.refIdent.str, procCallNode.arguments.map { visitExpression(it, parent, data) }.toMutableList() as ArrayList<IRExpression>, parent)
+        data.declareProcCall(procCallNode.refIdent.str, procCallNode.arguments.map { visitExpression(it, parent, data) }.toMutableList() as ArrayList<IRExpression>, parent, procCallNode.startPos)
 
     override fun visitRef(refNode: Node.StatementNode.ExpressionNode.ReferenceNode, parent: IRStatementContainer, data: SymbolTable): IRRef =
-        data.declareReference(refNode.refIdent.str, parent)
+        data.declareReference(refNode.refIdent.str, parent, refNode.startPos)
 
     override fun visitBinary(binaryNode: Node.StatementNode.ExpressionNode.BinaryNode, parent: IRStatementContainer, data: SymbolTable): IRBinary{
         val left = visitExpression(binaryNode.left, parent, data)
         val right = visitExpression(binaryNode.right, parent, data)
 
         return when(binaryNode){
-            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryAddNode -> IRBinaryPlus(left, right, left.type, parent)
-            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryMinusNode -> IRBinaryMinus(left, right, left.type, parent)
-            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryMultNode -> IRBinaryMult(left, right, left.type, parent)
-            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryDivNode -> IRBinaryDiv(left, right, left.type, parent)
+            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryAddNode -> IRBinaryPlus(left, right, left.type, parent, binaryNode.startPos)
+            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryMinusNode -> IRBinaryMinus(left, right, left.type, parent, binaryNode.startPos)
+            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryMultNode -> IRBinaryMult(left, right, left.type, parent, binaryNode.startPos)
+            is Node.StatementNode.ExpressionNode.BinaryNode.BinaryDivNode -> IRBinaryDiv(left, right, left.type, parent, binaryNode.startPos)
         }
     }
 
     override fun visitIntegerLiteral(intLiteral: Node.StatementNode.ExpressionNode.IntegerLiteralNode, parent: IRStatementContainer, data: SymbolTable): IRConstant<Int> =
-        IRConstant.integer(intLiteral.int, parent)
+        IRConstant.integer(intLiteral.int, parent, intLiteral.startPos)
 
     override fun visitBlock(
         blockNode: Node.StatementNode.ExpressionNode.BlockNode,
         parent: IRStatementContainer,
         data: SymbolTable
     ): IRBlock {
-        val block = IRBlock(blockNameGen.name, arrayListOf(), parent, IRType.default)
+        val block = IRBlock(blockNameGen.name, arrayListOf(), parent, IRType.default, blockNode.startPos)
         block.statements.addAll(blockNode.stmts.map {
             visitStatement(it, block, data)
         })

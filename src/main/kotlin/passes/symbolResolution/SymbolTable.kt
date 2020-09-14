@@ -1,5 +1,6 @@
 package passes.symbolResolution
 
+import TokenPos
 import buildPrettyString
 import ir.declarations.*
 import ir.declarations.expressions.IRProcCall
@@ -215,7 +216,7 @@ class SymbolTable{
         mutationSymbolTable
     )
 
-    fun declareModule(name: String) = moduleSymbolTable.declare(name, { IRModuleSymbol() }, { IRModule(name, null, it) })
+    fun declareModule(name: String) = moduleSymbolTable.declare(name, { IRModuleSymbol() }, { IRModule(name, null, it, TokenPos.default) })
 
     fun hasVariable(name: String) = findVariable(name) != null
 
@@ -224,8 +225,9 @@ class SymbolTable{
         type: IRType,
         expression: IRExpression,
         parent: IRStatementContainer,
+        position: TokenPos,
         variableFactory: (IRVarSymbol) -> IRVar = {
-            IRVar(name, type, expression, parent, it)
+            IRVar(name, type, expression, parent, it, position)
         }
     ) = varSymbolTable.declareLocal(name, { IRVarSymbol() }, variableFactory)
 
@@ -236,8 +238,9 @@ class SymbolTable{
         type: IRType,
         expression: IRExpression,
         parent: IRStatementContainer,
+        position: TokenPos,
         variableFactory: (IRLetSymbol) -> IRLet = {
-            IRLet(name, type, expression, parent, it)
+            IRLet(name, type, expression, parent, it, position)
         }
     ) = letSymbolTable.declareLocal(name, { IRLetSymbol() }, variableFactory)
 
@@ -248,8 +251,9 @@ class SymbolTable{
         type: IRType,
         expression: IRExpression,
         parent: IRStatementContainer?,
+        position: TokenPos,
         variableFactory: (IRConstSymbol) -> IRConst = {
-            IRConst(name, type, expression, parent, it)
+            IRConst(name, type, expression, parent, it, position)
         }
     ) = constSymbolTable.declareLocal(name, { IRConstSymbol() }, variableFactory)
 
@@ -265,8 +269,9 @@ class SymbolTable{
         name: String,
         returnType: IRType,
         parent: IRStatementContainer,
+        position: TokenPos,
         procFactory: (IRProcSymbol) -> IRProc = {
-            IRProc(name, returnType, parent, it)
+            IRProc(name, returnType, parent, it, position)
         }
     ) = procSymbolTable.declare(name, { IRProcSymbol() },  procFactory)
 
@@ -275,19 +280,20 @@ class SymbolTable{
     fun declareProcParam(
         procName: String,
         paramName: String,
-        type: IRType = IRType.default
+        type: IRType = IRType.default,
+        position: TokenPos
     ): IRProcParam {
         val proc = findProc(procName) ?: throw IllegalArgumentException("Could not find procedure with symbol $procName")
-        val param = procParamSymbolTable.declare(paramName, { IRProcParamSymbol() }, {IRProcParam(paramName, proc.owner, type, it)})
+        val param = procParamSymbolTable.declare(paramName, { IRProcParamSymbol() }, {IRProcParam(paramName, proc.owner, type, it, position)})
         proc.owner?.params?.add(param)
         return param
     }
 
-    fun declareReference(name: String, parent: IRStatementContainer?) = refSymbolTable.declare(name, { IRRefSymbol() }, { IRRef(name, IRType.default, it, parent) })
+    fun declareReference(name: String, parent: IRStatementContainer?, position: TokenPos) = refSymbolTable.declare(name, { IRRefSymbol() }, { IRRef(name, IRType.default, it, parent, position) })
 
     fun findReference(name: String) = refSymbolTable[name]
 
-    fun declareProcCall(name: String, arguments: ArrayList<IRExpression>, parent: IRStatementContainer?) =
+    fun declareProcCall(name: String, arguments: ArrayList<IRExpression>, parent: IRStatementContainer?, position: TokenPos) =
         procCallSymbolTable.declare(name, {
             IRProcCallSymbol()
         }, {
@@ -296,7 +302,8 @@ class SymbolTable{
                 arguments,
                 IRType.default,
                 it,
-                parent
+                parent,
+                position
             )
         })
 
@@ -305,13 +312,14 @@ class SymbolTable{
     fun declareMutation(
         name: String,
         parent: IRStatementContainer,
-        expression: IRExpression
+        expression: IRExpression,
+        position: TokenPos
     ) =
         mutationSymbolTable.declare(
             name, {
                 IRMutationSymbol()
             }, {
-                IRMutation(name, parent, expression.type, expression, it)
+                IRMutation(name, parent, expression.type, expression, it, position)
             }
         )
 

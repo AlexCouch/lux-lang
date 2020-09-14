@@ -7,23 +7,23 @@ class Lexer(val input: String){
     private var currentPos = TokenPos.default
     private val scanner = Scanner(input)
 
-    private val Char.delimitingToken: Either<Token> get() = when(this){
-        '=' -> Either.Some(Token.EqualToken(currentPos, currentPos))
-        '+' -> Either.Some(Token.PlusToken(currentPos, currentPos))
-        '-' -> Either.Some(Token.HyphenToken(currentPos, currentPos))
-        '*' -> Either.Some(Token.StarToken(currentPos, currentPos))
-        '/' -> Either.Some(Token.FSlashToken(currentPos, currentPos))
-        ':' -> Either.Some(Token.ColonToken(currentPos, currentPos))
-        ',' -> Either.Some(Token.CommaToken(currentPos, currentPos))
-        '(' -> Either.Some(Token.LParenToken(currentPos, currentPos))
-        ')' -> Either.Some(Token.RParenToken(currentPos, currentPos))
-        '[' -> Either.Some(Token.LBracketToken(currentPos, currentPos))
-        ']' -> Either.Some(Token.RBracketToken(currentPos, currentPos))
-        '{' -> Either.Some(Token.LCurlyToken(currentPos, currentPos))
-        '}' -> Either.Some(Token.RCurlyToken(currentPos, currentPos))
-        '>' -> Either.Some(Token.RAngleToken(currentPos, currentPos))
-        '<' -> Either.Some(Token.LAngleToken(currentPos, currentPos))
-        else -> Either.None
+    private val Char.delimitingToken: Option<Token> get() = when(this){
+        '=' -> Some(Token.EqualToken(currentPos, currentPos))
+        '+' -> Some(Token.PlusToken(currentPos, currentPos))
+        '-' -> Some(Token.HyphenToken(currentPos, currentPos))
+        '*' -> Some(Token.StarToken(currentPos, currentPos))
+        '/' -> Some(Token.FSlashToken(currentPos, currentPos))
+        ':' -> Some(Token.ColonToken(currentPos, currentPos))
+        ',' -> Some(Token.CommaToken(currentPos, currentPos))
+        '(' -> Some(Token.LParenToken(currentPos, currentPos))
+        ')' -> Some(Token.RParenToken(currentPos, currentPos))
+        '[' -> Some(Token.LBracketToken(currentPos, currentPos))
+        ']' -> Some(Token.RBracketToken(currentPos, currentPos))
+        '{' -> Some(Token.LCurlyToken(currentPos, currentPos))
+        '}' -> Some(Token.RCurlyToken(currentPos, currentPos))
+        '>' -> Some(Token.RAngleToken(currentPos, currentPos))
+        '<' -> Some(Token.LAngleToken(currentPos, currentPos))
+        else -> None
     }
 
     fun advance(): Option<Char> {
@@ -143,8 +143,8 @@ class Lexer(val input: String){
                             }
                             tokens + Token.StringLiteralToken(buf, startPos, currentPos)
                         }
-                        t.delimitingToken != Either.None -> {
-                            tokens + t.delimitingToken.unwrap()
+                        t.delimitingToken != None -> {
+                            tokens + (t.delimitingToken as Some).t
                             advance()
                         }
                     }

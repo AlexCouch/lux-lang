@@ -1,5 +1,6 @@
 package ir.declarations.expressions.branching
 
+import TokenPos
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.extensions.option.monad.flatMap
@@ -17,9 +18,10 @@ class IRBinaryConditional(
     val then: IRBlock,
     val otherwise: Option<IRBlock>,
     override val type: IRType,
-    override var parent: IRStatementContainer?
+    override var parent: IRStatementContainer?,
+    override val position: TokenPos
 ) : IRExpression {
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitBinaryConditional(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {

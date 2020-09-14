@@ -1,5 +1,6 @@
 package ir.declarations
 
+import TokenPos
 import buildPrettyString
 import ir.IRStatement
 import ir.builtin.BuiltinTypes
@@ -12,7 +13,8 @@ class IRProc(
     override val name: String,
     val returnType: IRType = BuiltinTypes.DYNAMIC.makeSimpleType(),
     override var parent: IRStatementContainer?,
-    override val symbol: IRProcSymbol
+    override val symbol: IRProcSymbol,
+    override val position: TokenPos
 ) : IRStatementContainer,
     IRSymbolOwner
 {
@@ -23,7 +25,7 @@ class IRProc(
     override val statements: ArrayList<IRStatement> = arrayListOf()
     val params: ArrayList<IRProcParam> = arrayListOf()
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitProc(this, data)
 
     @ExperimentalStdlibApi
@@ -97,7 +99,8 @@ class IRProcParam(
     val name: String,
     override var parent: IRStatementContainer?,
     val type: IRType = IRType.default,
-    override val symbol: IRProcParamSymbol
+    override val symbol: IRProcParamSymbol,
+    override val position: TokenPos
 ):
     IRStatement,
     IRSymbolOwner,
@@ -107,7 +110,7 @@ class IRProcParam(
         symbol.bind(this)
     }
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitProcParam(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {

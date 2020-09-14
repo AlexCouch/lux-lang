@@ -1,5 +1,6 @@
 package ir.declarations.expressions
 
+import TokenPos
 import buildPrettyString
 import ir.IRStatement
 import ir.declarations.IRExpression
@@ -11,9 +12,10 @@ class IRBlock(
     override val name: String,
     override val statements: ArrayList<IRStatement>,
     override var parent: IRStatementContainer?,
-    override val type: IRType
+    override val type: IRType,
+    override val position: TokenPos
 ) : IRStatementContainer, IRExpression{
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitBlock(this, data)
 
     @ExperimentalStdlibApi

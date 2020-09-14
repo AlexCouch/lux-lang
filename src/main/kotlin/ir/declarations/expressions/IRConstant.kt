@@ -1,5 +1,6 @@
 package ir.declarations.expressions
 
+import TokenPos
 import buildPrettyString
 import ir.visitors.IRElementVisitor
 import ir.builtin.BuiltinTypes
@@ -12,10 +13,11 @@ class IRConstant<T>(
     override val type: IRType,
     val kind: IRConstantKind<T>,
     val value: T,
-    override var parent: IRStatementContainer?
+    override var parent: IRStatementContainer?,
+    override val position: TokenPos
 ):
     IRExpression {
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitConstant(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {
@@ -23,17 +25,19 @@ class IRConstant<T>(
     }
 
     companion object{
-        fun integer(int: Int, parent: IRStatementContainer?) = IRConstant(
+        fun integer(int: Int, parent: IRStatementContainer?, position: TokenPos) = IRConstant(
             BuiltinTypes.INT.makeSimpleType(),
             IRConstantKind.Int,
             int,
-            parent
+            parent,
+            position
         )
-        fun string(str: String, parent: IRStatementContainer?) = IRConstant(
+        fun string(str: String, parent: IRStatementContainer?, position: TokenPos) = IRConstant(
             BuiltinTypes.STR.makeSimpleType(),
             IRConstantKind.Str,
             str,
-            parent
+            parent,
+            position
         )
     }
 

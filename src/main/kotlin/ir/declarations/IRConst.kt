@@ -1,5 +1,6 @@
 package ir.declarations
 
+import TokenPos
 import buildPrettyString
 import ir.symbol.IRConstSymbol
 import ir.symbol.IRVarSymbol
@@ -12,13 +13,14 @@ class IRConst(override val name: String,
               override val type: IRType,
               override val expression: IRExpression,
               override var parent: IRStatementContainer?,
-              override val symbol: IRVarSymbolBase<IRConst>
+              override val symbol: IRVarSymbolBase<IRConst>,
+              override val position: TokenPos
 ) : IRVarDeclaration<IRVarSymbolBase<IRConst>>{
     init{
         symbol.bind(this)
     }
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitConst(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {

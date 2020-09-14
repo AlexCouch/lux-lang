@@ -1,5 +1,6 @@
 package ir.declarations.expressions
 
+import TokenPos
 import buildPrettyString
 import ir.visitors.IRElementVisitor
 import ir.declarations.IRExpression
@@ -29,12 +30,13 @@ class IRBinaryPlus(
     override val left: IRExpression,
     override val right: IRExpression,
     override val type: IRType,
-    override var parent: IRStatementContainer?
+    override var parent: IRStatementContainer?,
+    override val position: TokenPos
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.PLUS
     override val precendence: Int = 2
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitBinaryPlus(this, data)
 
     @ExperimentalStdlibApi
@@ -57,12 +59,13 @@ class IRBinaryMinus(
     override val left: IRExpression,
     override val right: IRExpression,
     override val type: IRType,
-    override var parent: IRStatementContainer?
+    override var parent: IRStatementContainer?,
+    override val position: TokenPos
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.MINUS
     override val precendence: Int = 2
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitBinaryMinus(this, data)
 
     @ExperimentalStdlibApi
@@ -85,12 +88,13 @@ class IRBinaryMult(
     override val left: IRExpression,
     override val right: IRExpression,
     override val type: IRType,
-    override var parent: IRStatementContainer?
+    override var parent: IRStatementContainer?,
+    override val position: TokenPos
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.MULT
     override val precendence: Int = 1
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitBinaryMult(this, data)
 
     @ExperimentalStdlibApi
@@ -113,12 +117,13 @@ class IRBinaryDiv(
     override val left: IRExpression,
     override val right: IRExpression,
     override val type: IRType,
-    override var parent: IRStatementContainer?
+    override var parent: IRStatementContainer?,
+    override val position: TokenPos
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.DIV
     override val precendence: Int = 1
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitBinaryDiv(this, data)
 
     @ExperimentalStdlibApi

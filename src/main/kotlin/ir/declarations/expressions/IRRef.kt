@@ -1,5 +1,6 @@
 package ir.declarations.expressions
 
+import TokenPos
 import buildPrettyString
 import ir.visitors.IRElementVisitor
 import ir.declarations.IRExpression
@@ -14,13 +15,14 @@ class IRRef(
     val refName: String,
     override val type: IRType,
     override val symbol: IRRefSymbol,
-    override var parent: IRStatementContainer?
+    override var parent: IRStatementContainer?,
+    override val position: TokenPos
 ) : IRExpression, IRSymbolOwner{
     init{
         symbol.bind(this)
     }
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitRef(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {

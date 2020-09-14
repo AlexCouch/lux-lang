@@ -10,8 +10,8 @@ import ir.visitors.IRElementTransformer
 interface IRExpression : IRStatement{
     val type: IRType
 
-    override fun <D> transform(transformer: IRElementTransformer<D>, data: D): IRElement =
-        accept(transformer, data) as IRExpression
+    override fun <D> transform(transformer: IRElementTransformer<D>, data: D) =
+        accept(transformer, data)
 
     fun isPrimitive(): Boolean =
         this is IRConstant<*> || this is IRRef

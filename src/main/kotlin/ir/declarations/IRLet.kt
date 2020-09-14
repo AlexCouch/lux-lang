@@ -1,5 +1,6 @@
 package ir.declarations
 
+import TokenPos
 import buildPrettyString
 import ir.symbol.IRLetSymbol
 import ir.symbol.IRVarSymbol
@@ -12,14 +13,15 @@ class IRLet(override val name: String,
             override val type: IRType,
             override val expression: IRExpression,
             override var parent: IRStatementContainer?,
-            override val symbol: IRVarSymbolBase<IRLet>
+            override val symbol: IRVarSymbolBase<IRLet>,
+            override val position: TokenPos
 ) : IRDeclarationWithName, IRVarDeclaration<IRVarSymbolBase<IRLet>>{
 
     init{
         symbol.bind(this)
     }
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitLet(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {

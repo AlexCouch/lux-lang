@@ -1,5 +1,6 @@
 package ir.declarations.expressions
 
+import TokenPos
 import buildPrettyString
 import ir.declarations.IRExpression
 import ir.declarations.IRStatementContainer
@@ -15,14 +16,15 @@ class IRProcCall(
     val arguments: ArrayList<IRExpression> = arrayListOf(),
     override val type: IRType = IRType.default,
     override val symbol: IRProcCallSymbol,
-    override var parent: IRStatementContainer?
+    override var parent: IRStatementContainer?,
+    override val position: TokenPos
 ) : IRExpression, IRSymbolOwner{
 
     init{
         symbol.bind(this)
     }
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitProcCall(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {

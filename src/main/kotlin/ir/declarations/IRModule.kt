@@ -1,5 +1,6 @@
 package ir.declarations
 
+import TokenPos
 import buildPrettyString
 import ir.IRStatement
 import ir.symbol.IRSymbol
@@ -7,11 +8,12 @@ import ir.symbol.IRSymbolOwner
 import ir.visitors.IRElementVisitor
 
 class IRModule(override val name: String, override var parent: IRStatementContainer? = null,
-               override val symbol: IRSymbol): IRStatementContainer, IRSymbolOwner{
+               override val symbol: IRSymbol,
+               override val position: TokenPos): IRStatementContainer, IRSymbolOwner{
 
     override val statements: ArrayList<IRStatement> = arrayListOf()
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitModule(this, data)
 
     @ExperimentalStdlibApi

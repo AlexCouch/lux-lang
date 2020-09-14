@@ -1,5 +1,6 @@
 package ir.declarations
 
+import TokenPos
 import buildPrettyString
 import ir.symbol.IRMutationSymbol
 import ir.symbol.IRSymbol
@@ -13,13 +14,14 @@ class IRMutation(
     override var parent: IRStatementContainer?,
     val type: IRType = IRType.default,
     val expression: IRExpression,
-    override val symbol: IRMutationSymbol
+    override val symbol: IRMutationSymbol,
+    override val position: TokenPos
 ): IRDeclarationWithName, IRSymbolOwner{
     init{
         symbol.bind(this)
     }
 
-    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D): R =
+    override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitMutation(this, data)
 
     override fun <D> transformChildren(transformer: IRElementTransformer<D>, data: D) {

@@ -1,2 +1,2 @@
-const int = 5
+const int: int = 5
 const string = "Hello, world!"

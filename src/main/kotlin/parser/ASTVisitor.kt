@@ -4,7 +4,7 @@ interface ASTVisitor<P, R, D>{
     fun visitModule(module: Node.ModuleNode, data: D): R
     fun visitStatement(statement: Node.StatementNode, parent: P, data: D): R
     fun visitExpression(expression: Node.StatementNode.ExpressionNode, parent: P, data: D): R = visitStatement(expression, parent, data)
-    fun visitLet(let: Node.StatementNode.LetNode, parent: P, data: D): R = visitStatement(let, parent, data)
+    fun visitLet(legacyVariable: Node.StatementNode.LegacyVariableNode, parent: P, data: D): R = visitStatement(legacyVariable, parent, data)
     fun visitVar(varNode: Node.StatementNode.VarNode, parent: P, data: D): R = visitVar(varNode, parent, data)
     fun visitConst(constNode: Node.StatementNode.ConstNode, parent: P, data: D): R = visitStatement(constNode, parent, data)
     fun visitProc(procNode: Node.StatementNode.DefProcNode, parent: P, data: D): R = visitStatement(procNode, parent, data)
@@ -18,5 +18,5 @@ interface ASTVisitor<P, R, D>{
     fun visitMutation(mutationNode: Node.StatementNode.ReassignmentNode, parent: P, data: D): R = visitStatement(mutationNode, parent, data)
     fun visitPrint(print: Node.StatementNode.PrintNode, parent: P, data: D): R = visitStatement(print, parent, data)
     fun visitReturn(ret: Node.StatementNode.ReturnNode, parent: P, data: D): R = visitStatement(ret, parent, data)
-    fun visitBinaryConditional(conditional: Node.StatementNode.ExpressionNode.ConditionalBranchingNode.BinaryConditionalNode, parent: P, data: D): R = visitExpression(conditional, parent, data)
+    fun visitBinaryConditional(conditional: Node.StatementNode.ExpressionNode.ConditionalBranchingNode, parent: P, data: D): R = visitExpression(conditional, parent, data)
 }

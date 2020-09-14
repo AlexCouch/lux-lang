@@ -6,7 +6,7 @@ data class SourceAnnotation(val message: String, val line: ErrorLine, val source
     @ExperimentalStdlibApi
     override fun toString(): String =
         buildPrettyString {
-            append("${sourceOrigin.start.pos.line}:${sourceOrigin.start.pos.col}")
+            append("${line.start.pos.line + 1}:${line.start.pos.col + 1}")
             val lineNumSpace = when{
                 sourceOrigin.start.pos.line >= 10       -> SourceOrigin.SPACING_OFFSET - 1
                 sourceOrigin.start.pos.line >= 100      -> SourceOrigin.SPACING_OFFSET - 2

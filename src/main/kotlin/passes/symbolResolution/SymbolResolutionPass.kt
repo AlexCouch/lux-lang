@@ -2,14 +2,12 @@ package passes.symbolResolution
 
 import parser.ASTVisitor
 import Node
-import arrow.core.extensions.option.monad.flatMap
-import com.sun.org.apache.xpath.internal.ExpressionNode
+import arrow.core.none
 import ir.IRElement
 import ir.IRStatement
 import ir.declarations.*
 import ir.declarations.expressions.*
 import ir.declarations.expressions.branching.IRBinaryConditional
-import ir.symbol.IRConstSymbol
 import ir.types.IRSimpleType
 import ir.types.IRType
 import passes.TemporaryNameCreator
@@ -56,7 +54,7 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             is Node.StatementNode.ReassignmentNode -> visitMutation(statement, parent, data)
             is Node.StatementNode.PrintNode -> visitPrint(statement, parent, data)
             is Node.StatementNode.DefProcNode -> visitProc(statement, parent, data)
-            is Node.StatementNode.LetNode -> visitLet(statement, parent, data)
+            is Node.StatementNode.LegacyVariableNode -> visitLet(statement, parent, data)
             is Node.StatementNode.ReturnNode -> visitReturn(statement, parent, data)
             is Node.StatementNode.ExpressionNode -> visitExpression(statement, parent, data)
             else -> TODO("Working on it")
@@ -95,9 +93,9 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
         return data.declareConst(constNode.identifier.str, IRSimpleType(constNode.type.str), expr, parent)
     }
 
-    override fun visitLet(let: Node.StatementNode.LetNode, parent: IRStatementContainer, data: SymbolTable): IRLet{
-        val expr = visitExpression(let.expression, parent, data)
-        return data.declareLet(let.identifier.str, IRSimpleType(let.type.str), expr, parent)
+    override fun visitLet(legacyVariable: Node.StatementNode.LegacyVariableNode, parent: IRStatementContainer, data: SymbolTable): IRLet{
+        val expr = visitExpression(legacyVariable.expression, parent, data)
+        return data.declareLet(legacyVariable.identifier.str, IRSimpleType(legacyVariable.type.str), expr, parent)
     }
 
     override fun visitVar(varNode: Node.StatementNode.VarNode, parent: IRStatementContainer, data: SymbolTable): IRVar{
@@ -111,21 +109,38 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
     }
 
     override fun visitBinaryConditional(
-        conditional: Node.StatementNode.ExpressionNode.ConditionalBranchingNode.BinaryConditionalNode,
+        conditional: Node.StatementNode.ExpressionNode.ConditionalBranchingNode,
         parent: IRStatementContainer,
         data: SymbolTable
     ): IRBinaryConditional {
-        val condition = conditional.condition
-        val then = conditional.then
-        val otherwise = conditional.otherwise
+        when(conditional){
+            is Node.StatementNode.ExpressionNode.ConditionalBranchingNode.BinaryConditionalNode-> {
+                val condition = conditional.condition
+                val then = conditional.then
+                val otherwise = conditional.otherwise
 
-        return IRBinaryConditional(
-            visitExpression(condition, parent, data),
-            visitBlock(then, parent, data),
-            otherwise.map { visitBlock(it, parent, data) },
-            IRType.default,
-            parent
-        )
+                return IRBinaryConditional(
+                    visitExpression(condition, parent, data),
+                    visitBlock(then, parent, data),
+                    otherwise.map { visitBlock(it, parent, data) },
+                    IRType.default,
+                    parent
+                )
+            }
+            is Node.StatementNode.ExpressionNode.ConditionalBranchingNode.ConditionalBranchNode -> {
+                val condition = conditional.condition
+                val then = conditional.then
+
+                return IRBinaryConditional(
+                    visitExpression(condition, parent, data),
+                    visitBlock(then, parent, data),
+                    none(),
+                    IRType.default,
+                    parent
+                )
+            }
+            else -> TODO()
+        }
     }
 
     override fun visitExpression(expression: Node.StatementNode.ExpressionNode, parent: IRStatementContainer, data: SymbolTable): IRExpression =
@@ -135,9 +150,9 @@ class SymbolResolutionPass: ASTVisitor<IRStatementContainer, IRElement, SymbolTa
             is Node.StatementNode.ExpressionNode.ReferenceNode -> visitRef(expression, parent, data)
             is Node.StatementNode.ExpressionNode.ProcCallNode -> visitProcCall(expression, parent, data)
             is Node.StatementNode.ExpressionNode.BlockNode -> visitBlock(expression, parent, data)
-            is Node.StatementNode.ExpressionNode.ConditionalBranchingNode.BinaryConditionalNode -> visitBinaryConditional(expression, parent, data)
+            is Node.StatementNode.ExpressionNode.ConditionalBranchingNode -> visitBinaryConditional(expression, parent, data)
             is Node.StatementNode.ExpressionNode.StringLiteralNode -> visitStringLiteral(expression, parent, data)
-            else -> TODO()
+            else -> TODO(expression.toString())
         }
 
     override fun visitStringLiteral(

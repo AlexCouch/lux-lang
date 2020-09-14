@@ -4,3 +4,4 @@ const z = x / y
 var age = 22
 age = age + 1
 age = z * age
+name = "alex"

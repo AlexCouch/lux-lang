@@ -73,7 +73,7 @@ sealed class Node(open val startPos: TokenPos, open val endPos: TokenPos){
                 block(expression)
             }
         }
-        data class LetNode(
+        data class LegacyVariableNode(
             val identifier: IdentifierNode,
             val expression: ExpressionNode,
             val type: IdentifierNode,

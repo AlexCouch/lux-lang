@@ -19,14 +19,36 @@ class StatementParser: ParseRule{
             return constParseResult
         }
         stream.reset()
-        val exprResult = exprParser.parse(stream)
-        if(exprResult is Either.Left){
-            return exprResult
+        val varParseResult = varParser.parse(stream)
+        if(varParseResult is Either.Left){
+            return varParseResult
         }
+        stream.reset()
+        val legacyVarParseResult = legacyVarParser.parse(stream)
+        if(legacyVarParseResult is Either.Left){
+            return legacyVarParseResult
+        }
+        stream.reset()
         val printResult = printParser.parse(stream)
         if(printResult is Either.Left){
             return printResult
         }
+        stream.reset()
+        val procParseResult = procParser.parse(stream)
+        if(procParseResult is Either.Left){
+            return procParseResult
+        }
+        stream.reset()
+        val retParseResult = retParser.parse(stream)
+        if(retParseResult is Either.Left){
+            return retParseResult
+        }
+        stream.reset()
+        val exprResult = exprParser.parse(stream)
+        if(exprResult is Either.Left){
+            return exprResult
+        }
+        stream.popCheckpoint()
         if(stream.current is Some){
             val token = (stream.current as Some).t
             return buildSourceAnnotation {
@@ -59,8 +81,12 @@ class StatementParser: ParseRule{
 
     companion object{
         val constParser = ParseConst()
+        val varParser = VarParser()
+        val legacyVarParser = LegacyVarParser()
         val exprParser = ExpressionParser()
         val printParser = PrintParser()
+        val procParser = ParseProcedure()
+        val retParser = ParseReturn()
     }
 
 }

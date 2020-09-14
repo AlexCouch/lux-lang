@@ -124,6 +124,7 @@ class Lexer(val input: String){
                                     }
                                 }
                             }
+                            advance()
                             tokens + Token.StringLiteralToken(buf, startPos, currentPos)
                         }
                         t == '\'' -> {

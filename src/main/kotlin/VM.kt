@@ -161,7 +161,7 @@ class VM(val moduleName: String){
                 val value = evalExpr(stmt.expression)
                 heap += VMObject.VMVariable(stmt.identifier.str, value)
             }
-            is Node.StatementNode.LetNode -> {
+            is Node.StatementNode.LegacyVariableNode -> {
                 val value = evalExpr(stmt.expression)
                 stack += VMObject.VMVariable(stmt.identifier.str, value)
             }

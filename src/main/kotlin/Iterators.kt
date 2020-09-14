@@ -7,7 +7,7 @@ class TokenStream(val input: String): Iterator<Option<Token>>{
     private val tokens = arrayListOf<Token>()
     private var idx = -1
     val current get() = if(idx >= 0) tokens[idx].some() else none()
-    private var checkpoint: Int = -1
+    private var checkpoints: ArrayList<Int> = arrayListOf()
 
     override fun hasNext(): Boolean = idx+1 < tokens.size
     override fun next() = if(hasNext()) tokens[++idx].some() else none()
@@ -16,14 +16,18 @@ class TokenStream(val input: String): Iterator<Option<Token>>{
     operator fun plus(token: Token) = tokens.add(token)
 
     fun checkpoint(){
-        this.checkpoint = this.idx
+        this.checkpoints.add(this.idx)
     }
 
     fun reset(){
-        if(checkpoint == -1){
+        if(checkpoints.isEmpty()){
             return
         }
-        this.idx = this.checkpoint
+        this.idx = this.checkpoints.last()
+    }
+    fun popCheckpoint(){
+        this.checkpoints.remove(this.checkpoints.lastIndex)
+        this.reset()
     }
 }
 

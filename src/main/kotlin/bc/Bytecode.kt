@@ -16,6 +16,34 @@ enum class Bytecode{
     /**
      * This will create an object on the heap. It is not required for an object to be on the heap, but typically, this
      * is bound to some kind of variable object on the stack.
+     *
+     * When this is bound to a variable (via const or var) then this creates a reference object on the stack which points
+     * to the created object on the heap by index. The heap is a linked list (prototype uses arraylist) and index
+     * into this list will be pointed to by the reference on the stack, bound to the given heap object.
+     *
+     * Example:
+     * ```
+     * const json = json.parse(inputStr) #Whatever inputStr happens to be
+     * ```
+     *
+     * Store:
+     *  0: json
+     *  1: parse
+     *  2: inputStr
+     *
+     * Constants:
+     *  0: 55       ;This is a dummy location which is supposed to be the code location of the method json.parse, which is jumped to when it gets called
+     *  1: 0003
+     *  2: 0
+     *
+     *  ;Assuming that inputStr object is already on the stack
+     *  0000    CONSTANT    1       ;Push the constant at index 1 to the stack. This is the location we return to
+     *  0001    READ        2       ;Read the value bound to the name at names index 2. This is our inputStr
+     *  0002    JUMP        0       ;Jump to the location of json.parse
+     *  0003    HEAP                ;Take the object on the stack and move it to the next available slot on the heap
+     *  0004    REF         2       ;Create and push a reference pointing to the heap index of constant index 2 (heap index 0)
+     *  0005    PUSH_NAME   0       ;Push the name `json` immediately binding it to the heap reference
+     *
      */
     HEAP,
 

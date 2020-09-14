@@ -14,12 +14,12 @@ class BlockParser: ExpressionParseRule{
             val peek = (stream.peek as Some).t
             if(peek is Token.IdentifierToken){
                 if(peek.lexeme == "do"){
-                    stream.peek
+                    (stream.peek as Some).t
                 }else{
-                    stream.current
+                    (stream.current as Some).t
                 }
             }else{
-                stream.current
+                (stream.current as Some).t
             }
         }else{
             return buildSourceAnnotation {
@@ -36,7 +36,7 @@ class BlockParser: ExpressionParseRule{
             }.right()
         }
         while(stream.peek !is None &&
-            (stream.peek as Some).t.startPos.indentLevel > (startToken as Some).t.startPos.indentLevel
+            (stream.peek as Some).t.startPos.indentLevel > startToken.startPos.indentLevel
         ){
             when(val statement = ModuleParser.statementParser.parse(stream)) {
                 is Either.Left -> statements.add(statement.a)
@@ -47,26 +47,20 @@ class BlockParser: ExpressionParseRule{
             val peek = (stream.peek as Some).t
             if(peek is Token.IdentifierToken){
                 if(peek.lexeme == "end"){
-                    stream.peek
+                    (stream.peek as Some).t
                 }else{
-                    none()
+                    (stream.current as Some).t
                 }
             }else{
-                none()
+                (stream.current as Some).t
             }
         }else{
-            none()
+            (stream.current as Some).t
         }
         return Node.StatementNode.ExpressionNode.BlockNode(
             statements,
-            if(startToken is None)
-                statements[0].startPos
-            else
-                ((startToken as Some).t).startPos,
-            if(end is None)
-                statements[0].endPos
-            else
-                ((startToken as Some).t).endPos
+            startToken.startPos,
+            end.endPos
         ).left()
     }
 

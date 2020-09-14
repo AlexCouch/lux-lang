@@ -8,8 +8,8 @@ import arrow.core.*
 import errors.SourceAnnotation
 import errors.buildSourceAnnotation
 
-class ParseConst: StatementParseRule{
-    override fun parse(stream: TokenStream): Either<Node.StatementNode.ConstNode, SourceAnnotation> {
+class VarParser : StatementParseRule{
+    override fun parse(stream: TokenStream): Either<Node.StatementNode.VarNode, SourceAnnotation> {
         val next = stream.next()
         if(next is None){
             return buildSourceAnnotation {
@@ -40,7 +40,7 @@ class ParseConst: StatementParseRule{
             }.right()
             else -> token
         }
-        if(token.lexeme != "const"){
+        if(token.lexeme != "var"){
             return buildSourceAnnotation {
                 message = "Expected a 'const' token but instead found '${token.lexeme}'"
                 errorLine {
@@ -104,7 +104,7 @@ class ParseConst: StatementParseRule{
             is Either.Left -> exprResult.a
             is Either.Right -> return exprResult
         }
-        return Node.StatementNode.ConstNode(
+        return Node.StatementNode.VarNode(
             ident,
             expr,
             typeident,

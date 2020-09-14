@@ -1,7 +1,9 @@
 package parser
 
 import Node
+import Position
 import Token
+import TokenPos
 import TokenStream
 import arrow.core.Either
 import arrow.core.Some
@@ -24,7 +26,7 @@ class ParseIdentifier: ParseRule{
                         end = next.t.endPos
                     }
                     sourceOrigin {
-                        start = next.t.startPos
+                        start = TokenPos(Position(next.t.startPos.pos.line, 0),next.t.startPos.offset - next.t.startPos.pos.col, next.t.startPos.indentLevel)
                         end = next.t.endPos
                         source = stream.input
                     }

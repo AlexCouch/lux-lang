@@ -104,38 +104,6 @@ class BinaryBranchingParseRule: BranchingParseRule{
             is Either.Left -> result.a
             is Either.Right -> return result
         }
-        val colon = when(val next = stream.next()){
-            is Some -> if(next.t is Token.ColonToken){
-                next.t
-            }else{
-                return buildSourceAnnotation {
-                    message = "Expected a colon token but instead got ${next.t}"
-                    errorLine {
-                        start = next.t.startPos
-                        end = next.t.endPos
-                    }
-                    sourceOrigin {
-                        start = TokenPos(Position(next.t.startPos.pos.line, 0),next.t.startPos.offset - next.t.startPos.pos.col, next.t.startPos.indentLevel)
-                        end = next.t.endPos
-                        source = stream.input
-                    }
-                }.right()
-            }
-            is None -> {
-                return buildSourceAnnotation {
-                    message = "Unexpected end of token stream while parsing binary. This should only happen during development mode."
-                    errorLine {
-                        start = expr.startPos
-                        end = expr.endPos
-                    }
-                    sourceOrigin {
-                        start = TokenPos(Position(expr.startPos.pos.line, 0),expr.startPos.offset - expr.startPos.pos.col, expr.startPos.indentLevel)
-                        end = expr.endPos
-                        source = stream.input
-                    }
-                }.right()
-            }
-        }
         val consequence = when(val result = blockParser.parse(stream)){
             is Either.Left -> result.a
             is Either.Right -> return result
@@ -162,38 +130,6 @@ class BinaryBranchingParseRule: BranchingParseRule{
                     source = stream.input
                 }
             }.right()
-        }
-        val elseColon = when(val next = stream.next()){
-            is Some -> if(next.t is Token.ColonToken){
-                next.t
-            }else{
-                return buildSourceAnnotation {
-                    message = "Expected a colon token but instead got ${next.t}"
-                    errorLine {
-                        start = next.t.startPos
-                        end = next.t.endPos
-                    }
-                    sourceOrigin {
-                        start = TokenPos(Position(next.t.startPos.pos.line, 0),next.t.startPos.offset - next.t.startPos.pos.col, next.t.startPos.indentLevel)
-                        end = next.t.endPos
-                        source = stream.input
-                    }
-                }.right()
-            }
-            is None -> {
-                return buildSourceAnnotation {
-                    message = "Unexpected end of token stream while parsing binary. This should only happen during development mode."
-                    errorLine {
-                        start = expr.startPos
-                        end = expr.endPos
-                    }
-                    sourceOrigin {
-                        start = TokenPos(Position(expr.startPos.pos.line, 0),expr.startPos.offset - expr.startPos.pos.col, expr.startPos.indentLevel)
-                        end = expr.endPos
-                        source = stream.input
-                    }
-                }.right()
-            }
         }
         val otherwise = when(val result = blockParser.parse(stream)){
             is Either.Left -> result.a

@@ -7,9 +7,12 @@ import ir.symbol.IRSymbol
 import ir.symbol.IRSymbolOwner
 import ir.visitors.IRElementVisitor
 
-class IRModule(override val name: String, override var parent: IRStatementContainer? = null,
+class IRModule(override val name: String,
+               override var parent: IRStatementContainer? = null,
                override val symbol: IRSymbol,
-               override val position: TokenPos): IRStatementContainer, IRSymbolOwner{
+               override val startPos: TokenPos,
+               override val endPos: TokenPos
+): IRStatementContainer, IRSymbolOwner{
 
     override val statements: ArrayList<IRStatement> = arrayListOf()
 

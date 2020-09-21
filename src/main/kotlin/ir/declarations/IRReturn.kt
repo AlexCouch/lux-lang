@@ -6,7 +6,12 @@ import ir.IRStatement
 import ir.visitors.IRElementTransformer
 import ir.visitors.IRElementVisitor
 
-class IRReturn(val expr: IRExpression, override var parent: IRStatementContainer?, override val position: TokenPos) : IRStatement{
+class IRReturn(
+    val expr: IRExpression,
+    override var parent: IRStatementContainer?,
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
+) : IRStatement{
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitReturn(this, data)
 

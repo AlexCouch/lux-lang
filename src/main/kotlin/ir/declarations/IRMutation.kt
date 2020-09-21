@@ -15,7 +15,8 @@ class IRMutation(
     val type: IRType = IRType.default,
     val expression: IRExpression,
     override val symbol: IRMutationSymbol,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ): IRDeclarationWithName, IRSymbolOwner{
     init{
         symbol.bind(this)

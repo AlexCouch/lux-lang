@@ -129,7 +129,7 @@ class ParseProcedure: StatementParseRule{
                 is Either.Right -> return tyident
                 is Either.Left -> tyident.a
             }
-            params += Node.StatementNode.ProcParamNode(ident, tyident, paramIdent.startPos, tyident.endPos)
+            params += Node.StatementNode.ProcParamNode(paramIdent, tyident, paramIdent.startPos, tyident.endPos)
             if(stream.peek is Some && (stream.peek as Some).t !is Token.CommaToken){
                 break
             }

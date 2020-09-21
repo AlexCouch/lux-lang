@@ -5,7 +5,6 @@ import arrow.core.left
 import arrow.core.right
 import errors.SourceAnnotation
 import errors.buildSourceAnnotation
-import ir.IRElement
 import ir.IRStatement
 import ir.declarations.*
 import ir.declarations.expressions.*
@@ -34,14 +33,14 @@ class TypeCheckingPass : IRElementTransformer<SymbolTable>{
         return when (element) {
             is IRConst -> element.checkAndInferType(data)
             is IRVar -> element.checkAndInferType(data)
-            is IRLet -> element.checkAndInferType(data)
+            is IRLegacyVar -> element.checkAndInferType(data)
             is IRProc -> visitProc(element, data)
             else -> element.left()
         }
     }
 
     override fun visitProc(element: IRProc, data: SymbolTable): Either<IRProc, SourceAnnotation> {
-        val proc = data.declareProc(element.name, element.returnType, element.parent!!, element.position)
+        val proc = data.declareProc(element.name, element.returnType, element.parent!!, element.startPos, element.endPos)
         data.enterScope(proc)
         val statements = element.statements.map {
             when(it){
@@ -77,14 +76,14 @@ class TypeCheckingPass : IRElementTransformer<SymbolTable>{
         }
         if(type != expr.type){
             return when (this) {
-                is IRConst -> data.declareConst(name, expr.type, expr, parent!!, position).left()
-                is IRLet -> data.declareLet(name, expr.type, expr, parent!!, position).left()
-                is IRVar -> data.declareVariable(name, expr.type, expr, parent!!, position).left()
+                is IRConst -> data.declareConst(name, expr.type, expr, parent!!, startPos, endPos).left()
+                is IRLegacyVar -> data.declareLet(name, expr.type, expr, parent!!, startPos, endPos).left()
+                is IRVar -> data.declareVariable(name, expr.type, expr, parent!!, startPos, endPos).left()
                 else -> buildSourceAnnotation {
                     message =
                         "This should never happen, unless in development mode. Expected an IRVarDeclaration while checking and inferring type but instead got $this"
                     errorLine {
-                        start = this@checkAndInferType.position
+                        start = this@checkAndInferType.startPos
                     }
                 }.right()
             }
@@ -106,10 +105,10 @@ class TypeCheckingPass : IRElementTransformer<SymbolTable>{
                     }
                     if(lefty.type == righty.type){
                         return when(this){
-                            is IRBinaryPlus -> IRBinaryPlus(lefty, righty, lefty.type, parent, position).left()
-                            is IRBinaryMinus -> IRBinaryMinus(lefty, righty, lefty.type, parent, position).left()
-                            is IRBinaryMult -> IRBinaryMult(lefty, righty, lefty.type, parent, position).left()
-                            is IRBinaryDiv -> IRBinaryDiv(lefty, righty, lefty.type, parent, position).left()
+                            is IRBinaryPlus -> IRBinaryPlus(lefty, righty, lefty.type, parent, startPos, endPos).left()
+                            is IRBinaryMinus -> IRBinaryMinus(lefty, righty, lefty.type, parent, startPos, endPos).left()
+                            is IRBinaryMult -> IRBinaryMult(lefty, righty, lefty.type, parent, startPos, endPos).left()
+                            is IRBinaryDiv -> IRBinaryDiv(lefty, righty, lefty.type, parent, startPos, endPos).left()
                             else -> this.left()
                         }
                     }
@@ -126,7 +125,7 @@ class TypeCheckingPass : IRElementTransformer<SymbolTable>{
                     val variable = data.findVariable(refName) ?: throw IllegalArgumentException("No variable with symbol $refName is declared")
                     val type = if(variable is IRVarSymbolBase<*>) variable.owner!!.type else if(variable is IRProcParamSymbol) variable.owner!!.type else throw IllegalArgumentException("Could not get type from variable with symbol $refName")
                     return if(type != IRType.default){
-                        IRRef(refName, type, symbol, parent, position).left()
+                        IRRef(refName, type, symbol, parent, startPos, endPos).left()
                     }else{
                         element.left()
                     }

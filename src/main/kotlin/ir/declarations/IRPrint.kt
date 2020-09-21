@@ -5,8 +5,12 @@ import buildPrettyString
 import ir.visitors.IRElementVisitor
 import ir.visitors.IRElementTransformer
 
-class IRPrint(val expression: IRExpression, override var parent: IRStatementContainer?,
-              override val position: TokenPos) : IRDeclaration{
+class IRPrint(
+    val expression: IRExpression,
+    override var parent: IRStatementContainer?,
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
+) : IRDeclaration{
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitPrint(this, data)
 

@@ -1,5 +1,5 @@
 const result = if 10
-	20
+20
 else
 	10
 

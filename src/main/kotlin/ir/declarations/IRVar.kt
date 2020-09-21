@@ -14,7 +14,8 @@ class IRVar(
     override val expression: IRExpression,
     override var parent: IRStatementContainer?,
     override val symbol: IRVarSymbolBase<IRVar>,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ) : IRVarDeclaration<IRVarSymbolBase<IRVar>>{
     init{
         symbol.bind(this)

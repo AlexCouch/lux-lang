@@ -14,7 +14,8 @@ class IRConst(override val name: String,
               override val expression: IRExpression,
               override var parent: IRStatementContainer?,
               override val symbol: IRVarSymbolBase<IRConst>,
-              override val position: TokenPos
+              override val startPos: TokenPos,
+              override val endPos: TokenPos
 ) : IRVarDeclaration<IRVarSymbolBase<IRConst>>{
     init{
         symbol.bind(this)

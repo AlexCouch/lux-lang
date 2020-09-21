@@ -14,7 +14,8 @@ class IRProc(
     val returnType: IRType = BuiltinTypes.DYNAMIC.makeSimpleType(),
     override var parent: IRStatementContainer?,
     override val symbol: IRProcSymbol,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ) : IRStatementContainer,
     IRSymbolOwner
 {
@@ -100,7 +101,8 @@ class IRProcParam(
     override var parent: IRStatementContainer?,
     val type: IRType = IRType.default,
     override val symbol: IRProcParamSymbol,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ):
     IRStatement,
     IRSymbolOwner,

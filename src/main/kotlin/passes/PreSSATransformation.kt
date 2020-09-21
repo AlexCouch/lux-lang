@@ -6,7 +6,6 @@ import ir.IRElement
 import ir.IRStatement
 import ir.declarations.*
 import ir.declarations.expressions.*
-import ir.symbol.IRMutationSymbol
 import ir.visitors.IRElementTransformer
 import passes.symbolResolution.SymbolTable
 
@@ -34,13 +33,13 @@ class PreSSATransformation : IRElementTransformer<SymbolTable>{
     val tempNameCounter = TemporaryNameCreator()
 
     override fun visitModule(element: IRModule, data: SymbolTable): Either<IRModule, SourceAnnotation> {
-        val newModule = IRModule(element.name, null, element.symbol, element.position)
+        val newModule = IRModule(element.name, null, element.symbol, element.startPos, element.endPos)
         element.convertChildrenToSSAForm(newModule, data)
         return newModule.left()
     }
 
     override fun visitProc(element: IRProc, data: SymbolTable): Either<IRProc, SourceAnnotation> {
-        val irProc = data.declareProc(element.name, element.returnType, element.parent!!, element.position)
+        val irProc = data.declareProc(element.name, element.returnType, element.parent!!, element.startPos, element.endPos)
         irProc.params.addAll(element.params)
         element.convertChildrenToSSAForm(irProc, data)
         tempNameCounter.reset()
@@ -62,21 +61,21 @@ class PreSSATransformation : IRElementTransformer<SymbolTable>{
                         is Either.Left -> result.a
                         is Either.Right -> return result.b.some()
                     }
-                    newContainer.statements.add(data.declareVariable(it.name, it.type, ssa, newContainer, it.position))
+                    newContainer.statements.add(data.declareVariable(it.name, it.type, ssa, newContainer, it.startPos, it.endPos))
                 }
                 is IRConst -> {
                     val ssa = when(val result = it.expression.convertToSSAForm(newContainer, data)){
                         is Either.Left -> result.a
                         is Either.Right -> return result.b.some()
                     }
-                    newContainer.statements.add(data.declareConst(it.name, it.type, ssa, newContainer, it.position))
+                    newContainer.statements.add(data.declareConst(it.name, it.type, ssa, newContainer, it.startPos, it.endPos))
                 }
-                is IRLet -> {
+                is IRLegacyVar -> {
                     val ssa = when(val result = it.expression.convertToSSAForm(newContainer, data)){
                         is Either.Left -> result.a
                         is Either.Right -> return result.b.some()
                     }
-                    newContainer.statements.add(data.declareLet(it.name, it.type, ssa, newContainer, it.position))
+                    newContainer.statements.add(data.declareLet(it.name, it.type, ssa, newContainer, it.startPos, it.endPos))
                 }
                 is IRProc -> {
                     val newProc = when(val result = visitProc(it, data)){
@@ -101,9 +100,9 @@ class PreSSATransformation : IRElementTransformer<SymbolTable>{
                             is Either.Right -> return result
                         }
                         if (!new.isPrimitive()) {
-                            val const = data.declareConst(tempNameCounter.name, type, new, newContainer, position)
+                            val const = data.declareConst(tempNameCounter.name, type, new, newContainer, startPos, endPos)
                             newContainer.statements.add(const)
-                            data.declareReference(const.name, newContainer, position)
+                            data.declareReference(const.name, newContainer, startPos, endPos)
                         } else {
                             new
                         }
@@ -117,9 +116,9 @@ class PreSSATransformation : IRElementTransformer<SymbolTable>{
                             is Either.Right -> return result
                         }
                         if (!new.isPrimitive()) {
-                            val const = data.declareConst(tempNameCounter.name, type, new, newContainer, position)
+                            val const = data.declareConst(tempNameCounter.name, type, new, newContainer, startPos, endPos)
                             newContainer.statements.add(const)
-                            data.declareReference(const.name, newContainer, position)
+                            data.declareReference(const.name, newContainer, startPos, endPos)
                         } else {
                             new
                         }
@@ -127,20 +126,20 @@ class PreSSATransformation : IRElementTransformer<SymbolTable>{
                     else -> right
                 }
                 if (!newLeft.isPrimitive()) {
-                    val const = data.declareConst(tempNameCounter.name, type, newLeft, newContainer, position)
+                    val const = data.declareConst(tempNameCounter.name, type, newLeft, newContainer, startPos, endPos)
                     newContainer.statements.add(const)
-                    data.declareReference(const.name, newContainer, position)
+                    data.declareReference(const.name, newContainer, startPos, endPos)
                 }
                 if (!newRight.isPrimitive()) {
-                    val const = data.declareConst(tempNameCounter.name, type, newRight, newContainer, position)
+                    val const = data.declareConst(tempNameCounter.name, type, newRight, newContainer, startPos, endPos)
                     newContainer.statements.add(const)
-                    data.declareReference(const.name, newContainer, position)
+                    data.declareReference(const.name, newContainer, startPos, endPos)
                 }
                 val expr = when (kind) {
-                    IRBinaryKind.PLUS -> IRBinaryPlus(newLeft, newRight, type, newContainer, position)
-                    IRBinaryKind.MINUS -> IRBinaryMinus(newLeft, newRight, type, newContainer, position)
-                    IRBinaryKind.MULT -> IRBinaryMult(newLeft, newRight, type, newContainer, position)
-                    IRBinaryKind.DIV -> IRBinaryDiv(newLeft, newRight, type, newContainer, position)
+                    IRBinaryKind.PLUS -> IRBinaryPlus(newLeft, newRight, type, newContainer, startPos, endPos)
+                    IRBinaryKind.MINUS -> IRBinaryMinus(newLeft, newRight, type, newContainer, startPos, endPos)
+                    IRBinaryKind.MULT -> IRBinaryMult(newLeft, newRight, type, newContainer, startPos, endPos)
+                    IRBinaryKind.DIV -> IRBinaryDiv(newLeft, newRight, type, newContainer, startPos, endPos)
                 }
                 if (
                     (newLeft.isPrimitive() || newLeft is IRRef) &&
@@ -148,9 +147,9 @@ class PreSSATransformation : IRElementTransformer<SymbolTable>{
                 ) {
                     expr.left()
                 } else {
-                    val const = data.declareConst(tempNameCounter.name, type, expr, newContainer, position)
+                    val const = data.declareConst(tempNameCounter.name, type, expr, newContainer, startPos, endPos)
                     newContainer.statements.add(const)
-                    data.declareReference(const.name, newContainer, position).left()
+                    data.declareReference(const.name, newContainer, startPos, endPos).left()
                 }
             }
             else -> this.left()
@@ -165,7 +164,7 @@ class PreSSATransformation : IRElementTransformer<SymbolTable>{
             is IRProc -> visitProc(element, data)
             is IRPrint -> visitPrint(element, data)
             is IRMutation -> visitMutation(element, data)
-            is IRLet -> visitLet(element, data)
+            is IRLegacyVar -> visitLegacyVar(element, data)
             is IRVar -> visitVar(element, data)
             else -> TODO()
         }

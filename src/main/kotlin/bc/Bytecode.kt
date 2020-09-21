@@ -1,6 +1,7 @@
 package bc
 
 enum class Bytecode{
+    CONSTANT,
     /**
      * Push a name to be bound to the object on the top of the stack. This then creates a variable on the stack,
      * which may be read from or written to. This takes an index to the names store.

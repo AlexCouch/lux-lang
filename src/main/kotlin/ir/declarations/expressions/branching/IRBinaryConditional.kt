@@ -19,7 +19,8 @@ class IRBinaryConditional(
     val otherwise: Option<IRBlock>,
     override val type: IRType,
     override var parent: IRStatementContainer?,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ) : IRExpression {
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitBinaryConditional(this, data)

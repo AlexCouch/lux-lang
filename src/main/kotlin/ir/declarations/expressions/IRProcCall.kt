@@ -17,7 +17,8 @@ class IRProcCall(
     override val type: IRType = IRType.default,
     override val symbol: IRProcCallSymbol,
     override var parent: IRStatementContainer?,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ) : IRExpression, IRSymbolOwner{
 
     init{

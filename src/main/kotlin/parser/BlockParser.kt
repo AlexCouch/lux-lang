@@ -35,6 +35,21 @@ class BlockParser: ExpressionParseRule{
                 }
             }.right()
         }
+        if(stream.peek !is None &&
+            (stream.peek as Some).t.startPos.indentLevel <= startToken.startPos.indentLevel){
+            return buildSourceAnnotation {
+                message = "Indentation of statements within block must be at least 1 indentation level ahead of the start of the block"
+                errorLine {
+                    start = (stream.peek as Some).t.startPos
+                    end = (stream.peek as Some).t.endPos
+                }
+                sourceOrigin {
+                    start = (stream.peek as Some).t.startPos
+                    end = (stream.peek as Some).t.endPos
+                    source = stream.input
+                }
+            }.right()
+        }
         while(stream.peek !is None &&
             (stream.peek as Some).t.startPos.indentLevel > startToken.startPos.indentLevel
         ){

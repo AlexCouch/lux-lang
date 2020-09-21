@@ -14,7 +14,8 @@ class IRConstant<T>(
     val kind: IRConstantKind<T>,
     val value: T,
     override var parent: IRStatementContainer?,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ):
     IRExpression {
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
@@ -25,19 +26,21 @@ class IRConstant<T>(
     }
 
     companion object{
-        fun integer(int: Int, parent: IRStatementContainer?, position: TokenPos) = IRConstant(
+        fun integer(int: Int, parent: IRStatementContainer?, startPos: TokenPos, endPos: TokenPos) = IRConstant(
             BuiltinTypes.INT.makeSimpleType(),
             IRConstantKind.Int,
             int,
             parent,
-            position
+            startPos,
+            endPos
         )
-        fun string(str: String, parent: IRStatementContainer?, position: TokenPos) = IRConstant(
+        fun string(str: String, parent: IRStatementContainer?, startPos: TokenPos, endPos: TokenPos) = IRConstant(
             BuiltinTypes.STR.makeSimpleType(),
             IRConstantKind.Str,
             str,
             parent,
-            position
+            startPos,
+            endPos
         )
     }
 

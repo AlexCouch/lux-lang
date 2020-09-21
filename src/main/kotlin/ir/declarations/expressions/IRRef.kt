@@ -16,7 +16,8 @@ class IRRef(
     override val type: IRType,
     override val symbol: IRRefSymbol,
     override var parent: IRStatementContainer?,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ) : IRExpression, IRSymbolOwner{
     init{
         symbol.bind(this)

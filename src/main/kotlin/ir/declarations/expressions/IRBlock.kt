@@ -13,7 +13,8 @@ class IRBlock(
     override val statements: ArrayList<IRStatement>,
     override var parent: IRStatementContainer?,
     override val type: IRType,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ) : IRStatementContainer, IRExpression{
     override fun <R, D> accept(visitor: IRElementVisitor<R, D>, data: D) =
         visitor.visitBlock(this, data)

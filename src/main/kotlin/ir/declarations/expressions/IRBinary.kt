@@ -31,7 +31,8 @@ class IRBinaryPlus(
     override val right: IRExpression,
     override val type: IRType,
     override var parent: IRStatementContainer?,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.PLUS
     override val precendence: Int = 2
@@ -60,7 +61,8 @@ class IRBinaryMinus(
     override val right: IRExpression,
     override val type: IRType,
     override var parent: IRStatementContainer?,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.MINUS
     override val precendence: Int = 2
@@ -89,7 +91,8 @@ class IRBinaryMult(
     override val right: IRExpression,
     override val type: IRType,
     override var parent: IRStatementContainer?,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.MULT
     override val precendence: Int = 1
@@ -118,7 +121,8 @@ class IRBinaryDiv(
     override val right: IRExpression,
     override val type: IRType,
     override var parent: IRStatementContainer?,
-    override val position: TokenPos
+    override val startPos: TokenPos,
+    override val endPos: TokenPos
 ): IRBinary{
     override val kind: IRBinaryKind = IRBinaryKind.DIV
     override val precendence: Int = 1

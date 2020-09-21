@@ -39,7 +39,7 @@ abstract class IRVarSymbolBase<S: IRVarDeclaration<*>> : IRBindableSymbolBase<S>
 class IRModuleSymbol : IRBindableSymbolBase<IRModule>()
 
 class IRVarSymbol : IRVarSymbolBase<IRVar>()
-class IRLetSymbol : IRVarSymbolBase<IRLet>()
+class IRLetSymbol : IRVarSymbolBase<IRLegacyVar>()
 class IRConstSymbol : IRVarSymbolBase<IRConst>()
 
 class IRRefSymbol : IRBindableSymbolBase<IRRef>()

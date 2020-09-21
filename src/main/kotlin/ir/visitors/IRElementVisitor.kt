@@ -24,7 +24,7 @@ interface IRElementVisitor<R, D> {
     fun visitBinaryDiv(element: IRBinaryDiv, data: D): Either<R, SourceAnnotation> = visitExpression(element, data)
     fun visitRef(element: IRRef, data: D): Either<R, SourceAnnotation> = visitExpression(element, data)
     fun visitPrint(element: IRPrint, data: D): Either<R, SourceAnnotation> = visitStatement(element, data)
-    fun visitLet(element: IRLet, data: D): Either<R, SourceAnnotation> = visitStatement(element, data)
+    fun visitLegacyVar(element: IRLegacyVar, data: D): Either<R, SourceAnnotation> = visitStatement(element, data)
     fun visitProc(element: IRProc, data: D): Either<R, SourceAnnotation> = visitStatement(element, data)
     fun visitProcParam(element: IRProcParam, data: D): Either<R, SourceAnnotation> = visitStatement(element, data)
     fun visitProcCall(element: IRProcCall, data: D): Either<R, SourceAnnotation> = visitExpression(element, data)

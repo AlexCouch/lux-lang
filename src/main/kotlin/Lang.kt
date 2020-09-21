@@ -1,12 +1,15 @@
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Some
+import bc.BytecodeGenerator
+import bc.Store
 import errors.ErrorHandling
 import parser.ModuleParser
 import passes.PreSSATransformation
 import passes.symbolResolution.SymbolResolutionPass
 import passes.symbolResolution.SymbolTable
 import passes.typecheck.TypeCheckingPass
+import vm.VirtualMachine
 import java.io.File
 
 @ExperimentalStdlibApi
@@ -45,6 +48,33 @@ fun main(args: Array<String>){
         }
     }
     println(typeCheckedModule.toPrettyString())
+    val bcGen = BytecodeGenerator(src)
+    val dataStore = Store()
+    val bc = when(val result = bcGen.visitModule(typeCheckedModule, dataStore)){
+        is Either.Left -> result.a
+        is Either.Right -> {
+            println(errorHandler)
+            return
+        }
+    }
+    println(bc)
+    val vm = VirtualMachine(bc, dataStore)
+    when(val result = vm.run()){
+        is Some -> {
+            println(result.t)
+            return
+        }
+        is None -> {}
+    }
+    println("STACK")
+    vm.stack.forEach {
+        println(it)
+    }
+    println()
+    println("HEAP")
+    vm.heap.forEach {
+        println(it)
+    }
 //    val ssaTransformer = PreSSATransformation()
 //    val ssaSymbolTable = SymbolTable()
 //    val ssaIR = ssaTransformer.visitModule(typeCheckedModule, ssaSymbolTable)

@@ -10,6 +10,7 @@ Legend: x = completed; - in progress<br>
         * [x] Var
 * [x] Procedures (otherwise known as functions)
 * [x] Static Type Checking
+    * [x] Type Inference
 * [ ] Control Flow
 * [ ] Pattern matching
 * [ ] Algebraic Data Types

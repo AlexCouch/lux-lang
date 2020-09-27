@@ -1,2 +1,3 @@
-rootProject.name = 'alex-lang'
+rootProject.name = 'lux'
+include 'lux-vm'
 

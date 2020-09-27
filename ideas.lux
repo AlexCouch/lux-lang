@@ -1,0 +1,19 @@
+infix def int.calculate(nums: [int]) -> int
+	sum = 0
+	for num in nums
+		sum += num
+		
+	sum / len(nums)
+	return sum
+
+extension int
+	infix def [int].fold(self, block: block(acc: int, next: int) -> int) -> int
+		acc = 0
+		for num in self
+			acc = block(acc, num)
+		return acc
+
+result = [1, 3, 5, 7, 9] fold do(acc, next)
+	acc + num
+end
+println(result)

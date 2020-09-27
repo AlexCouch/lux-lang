@@ -4,7 +4,7 @@ plugins {
 }
 apply plugin: 'kotlin-kapt'
 
-group 'couch.alex-lang'
+group 'org.lux'
 version '1.0'
 
 sourceCompatibility = 1.8

@@ -19,7 +19,7 @@ Legend: x = completed; - in progress<br>
 * [ ] Abstract Classes
 * [ ] Code blocks
     - These are reusable blocks of code which are also expressions. 
-        These may have input and/or output(called procedural blocks) and they may be passed as arguments or assigned to variables
+        These may have input and/or output (called procedural blocks), and they may be passed as arguments or assigned to variables
 * [ ] Abstract Expressions (Functions)
     - These are purely mathematical/logically derived functions based on abstractions in lambda calculus. These provide a way to abstract over any expression into a single input variable and then applied later on. When applied to an expression, the compiler will reduce it down to something simpler. This is to make mathematical operations and equations simpler during compiletime so that the VM has to do less for the same thing done in other languages.
 * [ ] Associated procedures and variables

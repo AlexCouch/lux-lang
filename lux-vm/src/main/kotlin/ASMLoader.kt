@@ -42,17 +42,26 @@ class ASMLoader(private val file: File){
         TODO: Implement labels so that every time we process a label, we save it's place in the executable,
          so that we can use it again later
      */
-    private fun parseRef(tokens: TokenStream): Either<IntArray, String>{
+    private fun parseRef(tokens: TokenStream): Either<ByteArray, String>{
         val next = when(val next = tokens.next()){
             is None -> return "Expected an operand after MOV instruction but instead found EOF".right()
             is Some -> next.t
         }
-        var bytes = intArrayOf(InstructionSet.REF.code)
+        var bytes = byteArrayOf(InstructionSet.REF.code)
         when(next){
             is Token.IntegerLiteralToken -> {
-                bytes += next.literal
+                bytes += InstructionSet.WORD.code
+                bytes += (next.literal and 0xff00).toByte()
+                bytes += (next.literal and 0x00ff).toByte()
             }
             else -> return "Expected a memory address to reference, found $next".right()
+        }
+        when(val rbracket = tokens.next()){
+            is Some -> when(rbracket.t){
+                is Token.RBracketToken -> {}
+                else -> return "Expected a comma but instead found ${rbracket.t}".right()
+            }
+            is None -> return "Expected a comma but instead found EOF".right()
         }
         return bytes.left()
     }
@@ -67,12 +76,12 @@ class ASMLoader(private val file: File){
      *  The left and right operands may be integers or they may be a reference to a label, with or without square brackets.
      *  @see labels
      */
-    private fun parseMove(tokens: TokenStream): Either<IntArray, String> {
+    private fun parseMove(tokens: TokenStream): Either<ByteArray, String> {
         val leftOperand = when(val next = tokens.next()){
             is None -> return "Expected a left operand after MOV instruction but instead found EOF".right()
             is Some -> next.t
         }
-        var bytes = intArrayOf(InstructionSet.MOVE.code)
+        var bytes = byteArrayOf(InstructionSet.MOVE.code)
         //Parse the left operand
         when(leftOperand){
             is Token.IdentifierToken -> {
@@ -80,9 +89,13 @@ class ASMLoader(private val file: File){
                     "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
                 }
             }
-            is Token.LBracketToken -> return "A reference is not a valid destination. Remove the reference brackets and try again!".right()
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
             is Token.IntegerLiteralToken -> {
-                bytes += leftOperand.literal
+                bytes += (leftOperand.literal and 0xff00).toByte()
+                bytes += (leftOperand.literal and 0x00ff).toByte()
             }
             else -> return "Expected either a memory address destination or REF".right()
         }
@@ -110,7 +123,8 @@ class ASMLoader(private val file: File){
                 is Either.Right -> return result
             }
             is Token.IntegerLiteralToken -> {
-                bytes += rightOperand.literal
+                bytes += (rightOperand.literal and 0xff00).toByte()
+                bytes += (rightOperand.literal and 0x00ff).toByte()
             }
             else -> return "Expected either a memory address destination or REF".right()
         }
@@ -119,7 +133,7 @@ class ASMLoader(private val file: File){
 
     private fun parseFile(): Either<Executable, String>{
         val tokens = lexer.tokenize()
-        var bytes = intArrayOf()
+        var bytes = byteArrayOf()
         while(tokens.hasNext()){
             when(val next = tokens.next()){
                 is Some -> when(next.t){

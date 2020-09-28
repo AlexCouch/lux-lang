@@ -226,7 +226,16 @@ class VM(val binary: Executable){
         val destVal = if(destInstr != null){
             when(destInstr){
                 InstructionSet.REF -> {
-                    reference()
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
+                }
+                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
+                    println("Destination must always be of size byte; no size modifiers allowed: $destInstr")
+                    return
                 }
                 else -> DataType.Byte(dest)
             }
@@ -238,130 +247,122 @@ class VM(val binary: Executable){
         val targetVal = if(targetInstr != null){
             when(targetInstr){
                 InstructionSet.REF -> {
-                    reference()
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a target of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
                 }
                 InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
+                    println("Target must always be of size byte; no size modifiers allowed: $destInstr")
+                    return
+                }
                 else -> DataType.Byte(target)
             }
         }else{
             DataType.Byte(target)
         }
-        when{
-            targetInstr == null && destInstr == null -> memory.writeByte(dest, memory.readByte(target))
-            targetInstr != null && destInstr == null ->
-                when(targetInstr){
-                    InstructionSet.TOP -> memory.writeByte(dest, DataType.Byte(InstructionSet.TOP.code))
-                    InstructionSet.REF -> {
-                        when(val ref = reference()){
-                            is DataType.Byte -> memory.writeByte(dest, ref)
-                            is DataType.Word -> memory.writeWord(dest, ref)
-                            is DataType.DoubleWord -> memory.writeDouble(dest, ref)
-                            is DataType.QuadWord -> memory.writeQuad(dest, ref)
-                        }
-                    }
-                    InstructionSet.BYTE -> memory.writeByte(dest, memory.readByte(target))
-                    InstructionSet.WORD -> memory.writeByte(dest, memory.readWord(target).data2)
-                    InstructionSet.DWORD -> memory.writeByte(dest, memory.readDoubleWord(target).data2.data2)
-                    InstructionSet.QWORD -> memory.writeByte(dest, memory.readQuadWord(target).data2.data2.data2)
-                    else -> {
-                        println("Unknown memory address: $targetInstr")
-                        return
-                    }
-                }
-            targetInstr == null && destInstr != null ->
-                when(targetInstr){
-                    InstructionSet.REF -> {
-                        when(val ref = reference()){
-                            is DataType.Byte -> memory.writeByte(dest, ref)
-                            is DataType.Word -> memory.writeWord(dest, ref)
-                            is DataType.DoubleWord -> memory.writeDouble(dest, ref)
-                            is DataType.QuadWord -> memory.writeQuad(dest, ref)
-                        }
-                    }
-                    InstructionSet.BYTE -> memory.writeByte(dest, memory.readByte(target))
-                    InstructionSet.WORD -> memory.writeWord(dest, DataType.Word(DataType.Byte(0x0), memory.readByte(target)))
-                    InstructionSet.DWORD -> memory.writeDouble(dest,
-                        DataType.DoubleWord(
-                            DataType.Word(
-                                DataType.Byte(0x0),
-                                memory.readByte(target)
-                            ),
-                            DataType.Word(
-                                DataType.Byte(0x0),
-                                memory.readByte(target)
-                            )
-                        )
-                    )
-                    InstructionSet.QWORD -> memory.writeQuad(dest,
-                        DataType.QuadWord(
-                            DataType.DoubleWord(
-                                DataType.Word(
-                                    DataType.Byte(0x0),
-                                    memory.readByte(target)
-                                ),
-                                DataType.Word(
-                                    DataType.Byte(0x0),
-                                    memory.readByte(target)
-                                )
-                            ),
-                            DataType.DoubleWord(
-                                DataType.Word(
-                                    DataType.Byte(0x0),
-                                    memory.readByte(target)
-                                ),
-                                DataType.Word(
-                                    DataType.Byte(0x0),
-                                    memory.readByte(target)
-                                )
-                            )
-                        )
-                    )
-                    else -> {
-                        println("Unknown memory address: $destInstr")
-                        return
-                    }
-                }
-        }
+        memory.writeByte(destVal.data, memory.readByte(targetVal.data))
     }
 
     private fun moveByte(){
         val dest = binary.next()
         val destInstr = InstructionSet.values().find { it.code == dest }
-        val target = binary.next()
-        val targetInstr = InstructionSet.values().find { it.code == target }
-        when{
-            targetInstr == null && destInstr == null -> memory.writeByte(dest, DataType.Byte(target))
-            targetInstr != null && destInstr == null ->
-                when(targetInstr) {
-                    InstructionSet.TOP -> memory.writeByte(dest, DataType.Byte(InstructionSet.TOP.code))
-                    else -> {
-                        println("Unknown memory address: $targetInstr")
+        val destVal = if(destInstr != null){
+            when(destInstr){
+                InstructionSet.REF -> {
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
                         return
                     }
+                    ref
                 }
+                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
+                    println("Destination must always be of size byte; no size modifiers allowed: $destInstr")
+                    return
+                }
+                else -> DataType.Byte(dest)
+            }
+        }else{
+            DataType.Byte(dest)
         }
+        val target = binary.next()
+        val targetInstr = InstructionSet.values().find { it.code == target }
+        val targetVal = if(targetInstr != null){
+            when(targetInstr){
+                InstructionSet.REF -> {
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a target of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
+                }
+                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
+                    println("Target must always be of size byte; no size modifiers allowed: $destInstr")
+                    return
+                }
+                else -> DataType.Byte(target)
+            }
+        }else{
+            DataType.Byte(target)
+        }
+        memory.writeByte(destVal.data, targetVal)
     }
 
     private fun moveWord(){
         val dest = binary.next()
         val destInstr = InstructionSet.values().find { it.code == dest }
-        val target = binary.nextWord()
-        val targetInstr = InstructionSet.values().find { it.code == target.data1.data }
-        when{
-            targetInstr == null && destInstr == null -> {
-                memory.writeWord(dest, target)
-            }
-            targetInstr != null && destInstr == null ->
-                when(targetInstr){
-                    InstructionSet.TOP -> {
-                        memory.writeByte(dest, DataType.Byte(InstructionSet.TOP.code))
-                    }
-                    else -> {
-                        println("Unknown memory address: $targetInstr")
+        val destVal = if(destInstr != null){
+            when(destInstr){
+                InstructionSet.REF -> {
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
                         return
                     }
+                    ref
                 }
+                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
+                    println("Destination must always be of size byte; no size modifiers allowed: $destInstr")
+                    return
+                }
+                else -> DataType.Byte(dest)
+            }
+        }else{
+            DataType.Byte(dest)
         }
+        val target = binary.next()
+        val targetInstr = InstructionSet.values().find { it.code == target }
+        val targetVal = if(targetInstr != null){
+            when(targetInstr){
+                InstructionSet.REF -> {
+                    val ref = reference()
+                    if(ref !is DataType.Word){
+                        println("Expected a target of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
+                }
+                InstructionSet.TOP -> DataType.Word(DataType.Byte(0), DataType.Byte(stack.top))
+                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
+                    println("Target must always be of size byte; no size modifiers allowed: $destInstr")
+                    return
+                }
+                else -> {
+                    binary.instructionPtr--
+                    binary.nextWord()
+                }
+            }
+        }else{
+            binary.instructionPtr--
+            binary.nextWord()
+        }
+        memory.writeWord(destVal.data, targetVal)
     }
 
     private fun moveDoubleWord(){

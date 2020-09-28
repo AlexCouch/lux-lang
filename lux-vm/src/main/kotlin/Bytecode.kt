@@ -131,16 +131,16 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  ADD     REF 5,  10 ;Add 10 to whatever is stored in memory address 10 and push it onto the stack
      */
-    REF(0xc0.toByte()),
+    REF((0xc0 and 0xFF).toByte()),
 
     /**
      * The current pointer in the instruction. This can be used for saving stack frames
      * and returning back to a call site.
      */
-    INSPTR(0xc1.toByte()),
+    INSPTR((0xc1 and 0xFF).toByte()),
 
-    BYTE(0xc2.toByte()),
-    WORD(0xc3.toByte()),
-    DWORD(0xc4.toByte()),
-    QWORD(0xc5.toByte()),
+    BYTE((0xc2 and 0xFF).toByte()),
+    WORD((0xc3 and 0xFF).toByte()),
+    DWORD((0xc4 and 0xFF).toByte()),
+    QWORD((0xc5 and 0xFF).toByte()),
 }

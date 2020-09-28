@@ -1,6 +1,8 @@
 import arrow.core.*
 import java.io.File
 
+val String.isSizeModifier: Boolean get() = this in arrayOf("BYTE", "WORD", "DWORD", "QWORD")
+
 class ASMLoader(private val file: File){
     private val lexer = Lexer(file.readText())
 
@@ -50,9 +52,8 @@ class ASMLoader(private val file: File){
         var bytes = byteArrayOf(InstructionSet.REF.code)
         when(next){
             is Token.IntegerLiteralToken -> {
-                bytes += InstructionSet.WORD.code
-                bytes += (next.literal and 0xff00).toByte()
-                bytes += (next.literal and 0x00ff).toByte()
+                bytes += InstructionSet.BYTE.code
+                bytes += next.literal.toByte()
             }
             else -> return "Expected a memory address to reference, found $next".right()
         }
@@ -62,6 +63,118 @@ class ASMLoader(private val file: File){
                 else -> return "Expected a comma but instead found ${rbracket.t}".right()
             }
             is None -> return "Expected a comma but instead found EOF".right()
+        }
+        return bytes.left()
+    }
+
+    fun writeByte(tokens: TokenStream): Either<ByteArray, String>{
+        var bytes = byteArrayOf(InstructionSet.BYTE.code)
+        val next = when(val next = tokens.next()){
+            is Some -> next.t
+            is None -> return "Expected an integer value but instead found EOF".right()
+        }
+        when(next){
+            is Token.IntegerLiteralToken -> {
+                bytes += next.literal.toByte()
+            }
+            else -> return "Expected an integer literal but instead found $next".right()
+        }
+        return bytes.left()
+    }
+
+    fun writeWord(tokens: TokenStream): Either<ByteArray, String>{
+        var bytes = byteArrayOf(InstructionSet.WORD.code)
+        val next = when(val next = tokens.next()){
+            is Some -> next.t
+            is None -> return "Expected an integer value but instead found EOF".right()
+        }
+        when(next){
+            is Token.IntegerLiteralToken -> {
+                when{
+                    next.literal > 0xff -> {
+                        bytes += ((next.literal and 0xff00) ushr 2).toByte()
+                        bytes += (next.literal and 0x00ff).toByte()
+                    }
+                    next.literal > 0xffff -> {
+                        return "Expecting integer of size word or less but instead found size greater than word: ${next.literal}".right()
+                    }
+                    else -> {
+                        bytes += 0
+                        bytes += next.literal.toByte()
+                    }
+                }
+            }
+            else -> return "Expected an integer literal but instead found $next".right()
+        }
+        return bytes.left()
+    }
+
+    fun writeDoubleWord(tokens: TokenStream): Either<ByteArray, String>{
+        var bytes = byteArrayOf(InstructionSet.WORD.code)
+        val next = when(val next = tokens.next()){
+            is Some -> next.t
+            is None -> return "Expected an integer value but instead found EOF".right()
+        }
+        when(next){
+            is Token.IntegerLiteralToken -> {
+                when{
+                    next.literal > 0xff -> {
+                        bytes += ((next.literal and 0xff00) shl 2).toByte()
+                        bytes += (next.literal and 0x00ff).toByte()
+                    }
+                    next.literal > 0xffff -> {
+                        bytes += ((next.literal.toLong() and 0xff000000) shl 8).toByte()
+                        bytes += ((next.literal and 0x00ff0000) shl 4).toByte()
+                        bytes += ((next.literal and 0x0000ff00) shl 2).toByte()
+                        bytes += (next.literal and 0x000000ff).toByte()
+                    }
+                    else -> bytes += next.literal.toByte()
+                }
+            }
+            else -> return "Expected an integer literal but instead found $next".right()
+        }
+        return bytes.left()
+    }
+
+    /**
+     * TODO:
+     *  The tokenizer currently does not recognize hexidecimal of any sort. The tokenizer needs to be able to recognize
+     *  them in order for [writeQuadWord] and [writeDoubleWord] to work properly so for now these are WIP
+     */
+    fun writeQuadWord(tokens: TokenStream): Either<ByteArray, String>{
+        var bytes = byteArrayOf(InstructionSet.WORD.code)
+        val next = when(val next = tokens.next()){
+            is Some -> next.t
+            is None -> return "Expected an integer value but instead found EOF".right()
+        }
+        when(next){
+            is Token.IntegerLiteralToken -> {
+                when{
+                    next.literal > 0xff -> {
+                        bytes += 0
+                        bytes += 0
+                        bytes += ((next.literal and 0xff00) shl 2).toByte()
+                        bytes += (next.literal and 0x00ff).toByte()
+                    }
+                    next.literal > 0xffff -> {
+                        bytes += ((next.literal.toLong() and 0xff0000000000000) shl 16).toByte()
+                        bytes += ((next.literal.toLong() and 0x00ff000000) shl 12).toByte()
+                        bytes += ((next.literal and 0x0000ff00) shl 2).toByte()
+                        bytes += (next.literal and 0x000000ff).toByte()
+                        bytes += ((next.literal.toLong() and 0xff000000) shl 8).toByte()
+                        bytes += ((next.literal and 0x00ff0000) shl 4).toByte()
+                        bytes += ((next.literal and 0x0000ff00) shl 2).toByte()
+                        bytes += (next.literal and 0x000000ff).toByte()
+                    }
+                    else -> {
+                        bytes += 0
+                        bytes += 0
+                        bytes += 0
+                        bytes += next.literal.toByte()
+                    }
+                }
+            }
+            else -> return "Expected an integer literal but instead found $next".right()
         }
         return bytes.left()
     }
@@ -85,8 +198,10 @@ class ASMLoader(private val file: File){
         //Parse the left operand
         when(leftOperand){
             is Token.IdentifierToken -> {
-                when(leftOperand.lexeme.toUpperCase()){
-                    "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                val lexeme = leftOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme.isSizeModifier -> return "Operand size modifiers are not allowed on destinations".right()
                 }
             }
             is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
@@ -94,8 +209,7 @@ class ASMLoader(private val file: File){
                 is Either.Right -> return result
             }
             is Token.IntegerLiteralToken -> {
-                bytes += (leftOperand.literal and 0xff00).toByte()
-                bytes += (leftOperand.literal and 0x00ff).toByte()
+                bytes += leftOperand.literal.toByte()
             }
             else -> return "Expected either a memory address destination or REF".right()
         }
@@ -113,8 +227,30 @@ class ASMLoader(private val file: File){
         }
         when(rightOperand){
             is Token.IdentifierToken -> {
-                when(rightOperand.lexeme.toUpperCase()){
-                    "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                val lexeme = rightOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme.isSizeModifier -> {
+                        when(lexeme){
+                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
+                    else -> return "Labels are not yet implemented!".right()
                 }
             }
             //TODO: See [parseRef]
@@ -123,8 +259,127 @@ class ASMLoader(private val file: File){
                 is Either.Right -> return result
             }
             is Token.IntegerLiteralToken -> {
-                bytes += (rightOperand.literal and 0xff00).toByte()
-                bytes += (rightOperand.literal and 0x00ff).toByte()
+                bytes += rightOperand.literal.toByte()
+            }
+            else -> return "Expected either a memory address destination or REF".right()
+        }
+        return bytes.left()
+    }
+
+    private fun parseMoveb(tokens: TokenStream): Either<ByteArray, String>{
+        val leftOperand = when(val next = tokens.next()){
+            is None -> return "Expected a left operand after MOV instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        var bytes = byteArrayOf(InstructionSet.MOVB.code)
+        //Parse the left operand
+        when(leftOperand){
+            is Token.IdentifierToken -> {
+                val lexeme = leftOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme.isSizeModifier -> return "Operand size modifiers are not allowed on destinations".right()
+                }
+            }
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IntegerLiteralToken -> {
+                bytes += leftOperand.literal.toByte()
+            }
+            else -> return "Expected either a memory address destination or REF".right()
+        }
+        when(val next = tokens.next()){
+            is Some -> when(next.t){
+                is Token.CommaToken -> {}
+                else -> return "Expected a comma but instead found ${next.t}".right()
+            }
+            is None -> return "Expected a comma but instead found EOF".right()
+        }
+        //Parse the right operand
+        val rightOperand = when(val next = tokens.next()){
+            is None -> return "Expected a right operand for MOV instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        when(rightOperand){
+            is Token.IdentifierToken -> {
+                val lexeme = rightOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme.isSizeModifier -> return "No size modifiers allowed on movb operand: $lexeme".right()
+                    else -> return "Labels are not yet implemented!".right()
+                }
+            }
+            //TODO: See [parseRef]
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IntegerLiteralToken -> {
+                bytes += rightOperand.literal.toByte()
+            }
+            else -> return "Expected either a memory address destination or REF".right()
+        }
+        return bytes.left()
+    }
+
+    private fun parseMovew(tokens: TokenStream): Either<ByteArray, String>{
+        val leftOperand = when(val next = tokens.next()){
+            is None -> return "Expected a left operand after MOV instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        var bytes = byteArrayOf(InstructionSet.MOVW.code)
+        //Parse the left operand
+        when(leftOperand){
+            is Token.IdentifierToken -> {
+                val lexeme = leftOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme.isSizeModifier -> return "Operand size modifiers are not allowed on destinations".right()
+                }
+            }
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IntegerLiteralToken -> {
+                bytes += leftOperand.literal.toByte()
+            }
+            else -> return "Expected either a memory address destination or REF".right()
+        }
+        when(val next = tokens.next()){
+            is Some -> when(next.t){
+                is Token.CommaToken -> {}
+                else -> return "Expected a comma but instead found ${next.t}".right()
+            }
+            is None -> return "Expected a comma but instead found EOF".right()
+        }
+        //Parse the right operand
+        val rightOperand = when(val next = tokens.next()){
+            is None -> return "Expected a right operand for MOV instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        when(rightOperand){
+            is Token.IdentifierToken -> {
+                val lexeme = rightOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme.isSizeModifier -> return "No size modifiers allowed on movb operand: $lexeme".right()
+                    else -> return "Labels are not yet implemented!".right()
+                }
+            }
+            //TODO: See [parseRef]
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IntegerLiteralToken -> {
+//                bytes += InstructionSet.WORD.code
+                val bs = ByteArray(2)
+                bs[1] = ((rightOperand.literal) and 0xFF).toByte()
+                bs[0] = ((rightOperand.literal ushr 4) and 0xFF).toByte()
+                bytes += bs
             }
             else -> return "Expected either a memory address destination or REF".right()
         }
@@ -141,6 +396,14 @@ class ASMLoader(private val file: File){
                         val ident = next.t as Token.IdentifierToken
                         when(ident.lexeme.toUpperCase()){
                             "MOV" -> bytes += when(val result = parseMove(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return "${ident.startPos.pos.line}:${ident.startPos.pos.col}: ${result.b}".right()
+                            }
+                            "MOVB" -> bytes += when(val result = parseMoveb(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return "${ident.startPos.pos.line}:${ident.startPos.pos.col}: ${result.b}".right()
+                            }
+                            "MOVW" -> bytes += when(val result = parseMovew(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return "${ident.startPos.pos.line}:${ident.startPos.pos.col}: ${result.b}".right()
                             }

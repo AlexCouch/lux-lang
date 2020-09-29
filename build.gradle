@@ -29,6 +29,8 @@ dependencies {
     api "ch.qos.logback:logback-classic:1.2.3"
     api "guru.nidi:graphviz-kotlin:0.17.0"
     implementation("org.jetbrains.kotlinx:kotlinx-cli-jvm:0.3")
+    compile project(":tokenizer")
+    compile project(":utils")
 }
 
 compileKotlin {

@@ -173,7 +173,7 @@ class PrettyPrinter{
 
     infix fun Char.padded(range: IntRange){
         val padding = buildPrettyString {
-            for(i in range){
+            for (i in range) {
                 append(this@padded)
             }
         }

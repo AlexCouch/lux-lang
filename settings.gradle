@@ -1,3 +1,5 @@
 rootProject.name = 'lux'
 include 'lux-vm'
+include 'tokenizer'
+include 'utils'
 

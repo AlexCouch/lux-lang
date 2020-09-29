@@ -1,7 +1,6 @@
 package parser
 
 import Node
-import Position
 import TokenPos
 import TokenStream
 import arrow.core.*

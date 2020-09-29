@@ -1,11 +1,4 @@
-import arrow.core.*
-import kotlinx.cli.ArgParser
 import java.io.File
-import javax.xml.crypto.Data
-import kotlin.experimental.and
-import kotlin.experimental.or
-import kotlin.experimental.xor
-
 
 
 class Executable(private val instructions: ByteArray): Iterator<Byte>{

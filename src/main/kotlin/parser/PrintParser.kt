@@ -5,7 +5,6 @@ import TokenStream
 import arrow.core.*
 import errors.SourceAnnotation
 import errors.buildSourceAnnotation
-import kotlin.math.exp
 
 class PrintParser: StatementParseRule{
     override fun parse(stream: TokenStream): Either<Node.StatementNode.PrintNode, SourceAnnotation> {

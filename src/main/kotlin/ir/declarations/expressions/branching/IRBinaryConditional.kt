@@ -3,8 +3,6 @@ package ir.declarations.expressions.branching
 import TokenPos
 import arrow.core.Option
 import arrow.core.Some
-import arrow.core.extensions.option.monad.flatMap
-import arrow.core.some
 import buildPrettyString
 import ir.declarations.IRExpression
 import ir.declarations.IRStatementContainer

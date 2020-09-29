@@ -1,7 +1,4 @@
 import arrow.core.*
-import arrow.core.Either
-import arrow.optics.Lens
-import arrow.optics.Prism
 
 class TokenStream(val input: String): Iterator<Option<Token>>{
     private val tokens = arrayListOf<Token>()
@@ -47,16 +44,6 @@ class Scanner(val input: String): Iterator<Option<Char>>{
     }
 
 }
-
-data class InputScanner(val input: String, val pos: Int)
-val scanner = Prism(
-    getOrModify = {scanner: InputScanner ->
-        if(scanner.pos >= scanner.input.length) scanner.input[scanner.pos].some().left() else Either.right()
-    },
-    reverseGet = {scanner: InputScanner ->
-        scanner
-    }
-)
 
 fun main(){
 

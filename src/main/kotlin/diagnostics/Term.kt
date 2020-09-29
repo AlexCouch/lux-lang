@@ -1,8 +1,6 @@
 package diagnostics
 
 import arrow.core.Option
-import arrow.core.none
-import arrow.core.some
 import buildPrettyString
 import diagnostics.term.Config
 import diagnostics.term.Renderer

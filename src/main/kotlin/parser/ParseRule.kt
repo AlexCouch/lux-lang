@@ -1,7 +1,6 @@
 package parser
 
 import Node
-import Token
 import TokenStream
 import arrow.core.Either
 import errors.SourceAnnotation

@@ -6,7 +6,6 @@ import ir.visitors.IRElementVisitor
 import ir.declarations.IRExpression
 import ir.declarations.IRStatementContainer
 import ir.symbol.IRRefSymbol
-import ir.symbol.IRSymbol
 import ir.symbol.IRSymbolOwner
 import ir.types.IRType
 import ir.visitors.IRElementTransformer

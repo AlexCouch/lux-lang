@@ -2,7 +2,6 @@ package ir.types
 
 import buildPrettyString
 import ir.builtin.BuiltinTypes
-import ir.symbol.IRSymbol
 
 interface TypeMarker
 

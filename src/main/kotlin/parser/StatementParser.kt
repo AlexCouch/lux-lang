@@ -6,7 +6,6 @@ import TokenPos
 import TokenStream
 import arrow.core.Either
 import arrow.core.Some
-import arrow.core.left
 import arrow.core.right
 import errors.SourceAnnotation
 import errors.buildSourceAnnotation

@@ -1,5 +1,4 @@
 import arrow.core.*
-import java.lang.NumberFormatException
 
 class Lexer(val input: String){
     private var currentPos = TokenPos.default
@@ -26,7 +25,8 @@ class Lexer(val input: String){
 
     fun advance(): Option<Char> {
         val next = scanner.next()
-        currentPos = TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 1), scanner.idx, currentPos.indentLevel)
+        currentPos =
+            TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 1), scanner.idx, currentPos.indentLevel)
         return next
     }
 
@@ -38,7 +38,8 @@ class Lexer(val input: String){
 
     fun nextTab(): Option<Char>{
         val next = scanner.next()
-        currentPos = TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 1), scanner.idx, currentPos.indentLevel + 1)
+        currentPos =
+            TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 1), scanner.idx, currentPos.indentLevel + 1)
         return next
     }
 

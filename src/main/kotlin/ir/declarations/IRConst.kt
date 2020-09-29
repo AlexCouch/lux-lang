@@ -2,8 +2,6 @@ package ir.declarations
 
 import TokenPos
 import buildPrettyString
-import ir.symbol.IRConstSymbol
-import ir.symbol.IRVarSymbol
 import ir.symbol.IRVarSymbolBase
 import ir.types.IRType
 import ir.visitors.IRElementVisitor

@@ -6,10 +6,8 @@ import Token
 import TokenPos
 import TokenStream
 import arrow.core.*
-import com.sun.org.apache.xpath.internal.ExpressionNode
 import errors.SourceAnnotation
 import errors.buildSourceAnnotation
-import jdk.nashorn.internal.ir.BinaryNode
 
 interface ExpressionParseRule: StatementParseRule
 class ExpressionParser: ParseRule {

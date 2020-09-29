@@ -5,7 +5,6 @@ import buildPrettyString
 import ir.declarations.IRExpression
 import ir.declarations.IRStatementContainer
 import ir.symbol.IRProcCallSymbol
-import ir.symbol.IRSymbol
 import ir.symbol.IRSymbolOwner
 import ir.types.IRType
 import ir.visitors.IRElementTransformer

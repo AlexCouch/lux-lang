@@ -3,8 +3,6 @@ package parser
 import TokenStream
 import arrow.core.*
 import errors.ErrorHandling
-import errors.SourceAnnotation
-import errors.buildSourceAnnotation
 
 class ModuleParser(val moduleName: String, val errorHandler: ErrorHandling){
     fun parse(stream: TokenStream): Option<Node.ModuleNode> {

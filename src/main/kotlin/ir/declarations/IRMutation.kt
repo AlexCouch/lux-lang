@@ -3,7 +3,6 @@ package ir.declarations
 import TokenPos
 import buildPrettyString
 import ir.symbol.IRMutationSymbol
-import ir.symbol.IRSymbol
 import ir.symbol.IRSymbolOwner
 import ir.types.IRType
 import ir.visitors.IRElementVisitor

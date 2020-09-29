@@ -11,6 +11,7 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    maven { url "https://kotlin.bintray.com/kotlinx" }
     maven { url "https://dl.bintray.com/arrow-kt/arrow-kt/" }
     maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local/' } // for SNAPSHOT builds
 }
@@ -27,6 +28,7 @@ dependencies {
 //    kapt           "io.arrow-kt:arrow-meta:$arrow_version"
     api "ch.qos.logback:logback-classic:1.2.3"
     api "guru.nidi:graphviz-kotlin:0.17.0"
+    implementation("org.jetbrains.kotlinx:kotlinx-cli-jvm:0.3")
 }
 
 compileKotlin {

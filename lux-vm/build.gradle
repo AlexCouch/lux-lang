@@ -8,6 +8,7 @@ version '1.0'
 
 repositories {
     mavenCentral()
+    maven { url "https://kotlin.bintray.com/kotlinx" }
 }
 
 def arrow_version = "0.10.4"
@@ -19,4 +20,5 @@ dependencies {
     compile        "io.arrow-kt:arrow-syntax:$arrow_version"
     compile        "io.arrow-kt:arrow-optics:$arrow_version"
     compile project(':')
+    implementation("org.jetbrains.kotlinx:kotlinx-cli-jvm:0.3")
 }

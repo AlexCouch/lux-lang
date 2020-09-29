@@ -1,3 +1,7 @@
 movb 123, 15
 movb 10, 55
-mov [123], 10
+push [123]
+push [10]
+pop
+pop
+jmp 0

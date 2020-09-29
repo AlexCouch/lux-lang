@@ -1,4 +1,5 @@
 import arrow.core.*
+import kotlinx.cli.ArgParser
 import java.io.File
 import javax.xml.crypto.Data
 import kotlin.experimental.and
@@ -75,6 +76,10 @@ class Executable(private val instructions: ByteArray): Iterator<Byte>{
             )
         )
     )
+
+    fun writeToFile(file: File){
+        file.writeBytes(instructions)
+    }
 
 }
 
@@ -411,7 +416,16 @@ class VM(val binary: Executable){
 
     private fun push(){
         val data = binary.nextByte()
-        stack.push(data)
+        val dataInstr = InstructionSet.values().find { it.code == data.data }
+        val dataVal = if(dataInstr != null){
+            when(dataInstr){
+                InstructionSet.REF -> reference()
+                else -> data
+            }
+        }else{
+            data
+        }
+        stack.push(dataVal)
     }
 
     private fun pop(){
@@ -590,37 +604,3 @@ class VM(val binary: Executable){
     }
 }
 
-@ExperimentalStdlibApi
-fun main(){
-    val file = File("asm/test.lasm")
-    if(!file.exists()){
-        println("asm/test.lasm doesn't exist!")
-        return
-    }
-    val asm = ASMLoader(file)
-    val exec = when(val result = asm.executable){
-        is Some -> result.t
-        is None -> return
-    }
-    println(exec)
-//    val exec = Executable(byteArrayOf(
-//        InstructionSet.ADD.code,
-//        5,
-//        3,
-//        InstructionSet.MOVL.code,
-//        0,
-//        InstructionSet.TOP.code,
-//        InstructionSet.POP.code,
-//        InstructionSet.DIV.code,
-//        InstructionSet.REF.code,
-//        0,
-//        2,
-//        InstructionSet.MOVL.code,
-//        1,
-//        InstructionSet.TOP.code,
-//        InstructionSet.POP.code
-//    )
-//    )
-    val vm = VM(exec)
-    vm.run()
-}

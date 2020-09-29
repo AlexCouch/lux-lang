@@ -386,6 +386,40 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
+    private fun parsePush(tokens: TokenStream): Either<ByteArray, String>{
+        val operand = when(val next = tokens.next()){
+            is None -> return "Expected a left operand after MOV instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        var bytes = byteArrayOf(InstructionSet.PUSH.code)
+        when(operand){
+            is Token.IntegerLiteralToken -> bytes += operand.literal.toByte()
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IdentifierToken -> return "Labels are not yet implemented!".right()
+        }
+        return bytes.left()
+    }
+
+    private fun parseJump(tokens: TokenStream): Either<ByteArray, String>{
+        val operand = when(val next = tokens.next()){
+            is None -> return "Expected a left operand after MOV instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        var bytes = byteArrayOf(InstructionSet.JMP.code)
+        when(operand){
+            is Token.IntegerLiteralToken -> bytes += operand.literal.toByte()
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IdentifierToken -> return "Labels are not yet implemented!".right()
+        }
+        return bytes.left()
+    }
+
     private fun parseFile(): Either<Executable, String>{
         val tokens = lexer.tokenize()
         var bytes = byteArrayOf()
@@ -404,6 +438,15 @@ class ASMLoader(private val file: File){
                                 is Either.Right -> return "${ident.startPos.pos.line}:${ident.startPos.pos.col}: ${result.b}".right()
                             }
                             "MOVW" -> bytes += when(val result = parseMovew(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return "${ident.startPos.pos.line}:${ident.startPos.pos.col}: ${result.b}".right()
+                            }
+                            "PUSH" -> bytes += when(val result = parsePush(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return "${ident.startPos.pos.line}:${ident.startPos.pos.col}: ${result.b}".right()
+                            }
+                            "POP" -> bytes += InstructionSet.POP.code
+                            "JMP" -> bytes += when(val result = parseJump(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return "${ident.startPos.pos.line}:${ident.startPos.pos.col}: ${result.b}".right()
                             }

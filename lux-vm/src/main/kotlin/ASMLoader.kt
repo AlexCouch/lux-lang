@@ -288,6 +288,9 @@ class ASMLoader(private val file: File){
             is Token.IntegerLiteralToken -> {
                 bytes += leftOperand.literal.toByte()
             }
+            is Token.ByteLiteralToken -> bytes += leftOperand.literal
+            is Token.ShortLiteralToken -> bytes += leftOperand.literal.toByte()
+            is Token.LongLiteralToken -> bytes += leftOperand.literal.toByte()
             else -> return "Expected either a memory address destination or REF".right()
         }
         when(val next = tokens.next()){
@@ -319,6 +322,9 @@ class ASMLoader(private val file: File){
             is Token.IntegerLiteralToken -> {
                 bytes += rightOperand.literal.toByte()
             }
+            is Token.ByteLiteralToken -> bytes += rightOperand.literal
+            is Token.ShortLiteralToken -> bytes += rightOperand.literal.toByte()
+            is Token.LongLiteralToken -> bytes += rightOperand.literal.toByte()
             else -> return "Expected either a memory address destination or REF".right()
         }
         return bytes.left()
@@ -421,7 +427,10 @@ class ASMLoader(private val file: File){
     }
 
     private fun parseFile(): Either<Executable, String>{
-        val tokens = lexer.tokenize()
+        val tokens = when(val result = lexer.tokenize()){
+            is Some -> result.t
+            is None -> return "Failed to tokenize file, see console.".right()
+        }
         var bytes = byteArrayOf()
         while(tokens.hasNext()){
             when(val next = tokens.next()){

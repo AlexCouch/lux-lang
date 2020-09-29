@@ -126,7 +126,28 @@ sealed class Token(open val startPos: TokenPos, open val endPos: TokenPos){
             }
     }
 
+    data class ByteLiteralToken(val literal: Byte, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(literal)
+            }
+    }
+    data class ShortLiteralToken(val literal: Short, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(literal)
+            }
+    }
     data class IntegerLiteralToken(val literal: Int, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(literal)
+            }
+    }
+    data class LongLiteralToken(val literal: Long, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
         @ExperimentalStdlibApi
         override fun toString(): String =
             buildPrettyString {

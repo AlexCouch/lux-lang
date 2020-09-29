@@ -28,8 +28,20 @@ class PrettyPrinter{
         append(char.toString())
     }
 
+    fun append(long: Long){
+        append(long.toString())
+    }
+
     fun append(int: Int){
         append(int.toString())
+    }
+
+    fun append(short: Short){
+        append(short.toString())
+    }
+
+    fun append(byte: Byte){
+        append(byte.toString())
     }
 
     fun append(string: String){

@@ -1,4 +1,4 @@
-movb 123, 15
+movb 123, 0x15
 movb 10, 55
 push [123]
 push [10]

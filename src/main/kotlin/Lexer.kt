@@ -1,7 +1,5 @@
-import arrow.core.None
-import arrow.core.Option
-import arrow.core.Some
-import arrow.core.fix
+import arrow.core.*
+import java.lang.NumberFormatException
 
 class Lexer(val input: String){
     private var currentPos = TokenPos.default
@@ -44,7 +42,7 @@ class Lexer(val input: String){
         return next
     }
 
-    fun tokenize(): TokenStream{
+    fun tokenize(): Option<TokenStream>{
         val tokens = TokenStream(input)
         while(scanner.current.isDefined()){
             when(val c = scanner.current){
@@ -93,6 +91,34 @@ class Lexer(val input: String){
                             }
                             tokens + Token.IdentifierToken(buf, startPos, currentPos)
                         }
+                        t.isDigit() && t == '0' && scanner.peek.exists { it == 'x' } -> {
+                            val startPos = currentPos
+                            val buf = buildString {
+                                append(t)
+                                scan@ while(true){
+                                    val next = advance()
+                                    if(next.isEmpty()) break@scan
+                                    if(next is Some){
+                                        when{
+                                            next.t.isLetterOrDigit() -> append(next.t)
+                                            else -> break@scan
+                                        }
+                                    }
+                                }
+                            }
+                            tokens + buf.substringAfter("x").let {
+                                when(it.length){
+                                    2 -> Token.ByteLiteralToken(it.toByte(16), startPos, currentPos)
+                                    4 -> Token.ShortLiteralToken(it.toShort(16), startPos, currentPos)
+                                    8 -> Token.IntegerLiteralToken(it.toInt(16), startPos, currentPos)
+                                    16 -> Token.LongLiteralToken(it.toLong(16), startPos, currentPos)
+                                    else -> {
+                                        println("Hex literal too large. Only accepting up to 8 bytes in length, instead found ${it.length}")
+                                        return none()
+                                    }
+                                }
+                            }
+                        }
                         t.isDigit() -> {
                             val startPos = currentPos
                             val buf = buildString {
@@ -108,7 +134,17 @@ class Lexer(val input: String){
                                     }
                                 }
                             }
-                            tokens + Token.IntegerLiteralToken(buf.toInt(), startPos, currentPos)
+                            val lit = when(val data = buf.toIntOrNull()){
+                                null -> when(val d = buf.toLongOrNull()){
+                                    null -> {
+                                        println("Failed to parse number literal into either integer or long: $buf")
+                                        return none()
+                                    }
+                                    else -> Token.LongLiteralToken(d, startPos, currentPos)
+                                }
+                                else -> Token.IntegerLiteralToken(data, startPos, currentPos)
+                            }
+                            tokens + lit
                         }
                         t == '"' -> {
                             val startPos = currentPos
@@ -151,6 +187,6 @@ class Lexer(val input: String){
                 }
             }
         }
-        return tokens
+        return tokens.some()
     }
 }

@@ -190,4 +190,34 @@ enum class InstructionSet(val code: Byte){
      * Jump if the first operand is greater than or equal to the second operand, to the target given by the third operand.
      */
     JGE(0xd5.toByte()),
+
+    /**
+     * Takes a memory address as left operand, and does a bitwise AND on its value with the right operand, then
+     * saving the result in the given address.
+     */
+    AND(0x90.toByte()),
+    /**
+     * Takes a memory address as left operand, and does a bitwise OR on its value with the right operand, then
+     * saving the result in the given address.
+     */
+    OR(0x91.toByte()),
+    /**
+     * Takes a memory address as left operand, and does a bitwise XOR on its value with the right operand, then
+     * saving the result in the given address.
+     */
+    XOR(0x92.toByte()),
+    /**
+     * Takes a memory address as operand and does a bitwise inversion on its operators
+     */
+    INV(0x93.toByte()),
+    /**
+     * Takes a memory address as left operand, and does a bitwise right shift on its value with the right operand, then
+     * saving the result in the given address.
+     */
+    SHR(0x94.toByte()),
+    /**
+     * Takes a memory address as left operand, and does a bitwise left shift on its value with the right operand, then
+     * saving the result in the given address.
+     */
+    SHL(0x95.toByte()),
 }

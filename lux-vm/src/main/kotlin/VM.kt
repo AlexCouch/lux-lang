@@ -133,6 +133,15 @@ class Stack{
 class Memory{
     val memory = ByteArray(1024)
 
+    fun write(dest: Byte, target: DataType){
+        when(target){
+            is DataType.Byte -> writeByte(dest, target)
+            is DataType.Word -> writeWord(dest, target)
+            is DataType.DoubleWord -> writeDouble(dest, target)
+            is DataType.QuadWord -> writeQuad(dest, target)
+        }
+    }
+
     fun writeByte(dest: Byte, target: DataType.Byte){
         memory[dest.toInt()] = target.data
     }
@@ -245,6 +254,28 @@ class VM(val binary: Executable){
         when(locInstr){
             InstructionSet.TOP -> binary.instructionPtr = stack.top.toInt()
         }
+    }
+
+    private fun unaryOperator(block: (operand: DataType) -> Unit){
+        val operand = binary.nextByte()
+        val operandInstr = InstructionSet.values().find { it.code == operand.data }
+        val operandValue = if(operandInstr != null){
+            when(operandInstr){
+                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.REF -> {
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
+                }
+                else -> operand
+            }
+        }else{
+            operand
+        }
+        block(operandValue)
     }
 
     fun binaryOperation(block: (left: DataType, right: DataType) -> Unit){
@@ -422,9 +453,17 @@ class VM(val binary: Executable){
                     }
                     memory.writeQuad(left.data, right)
                 }
-                InstructionSet.PUSH -> push()
+                InstructionSet.PUSH -> unaryOperator{ operand ->
+                    stack.push(operand)
+                }
                 InstructionSet.POP -> pop()
-                InstructionSet.JMP -> jump()
+                InstructionSet.JMP -> unaryOperator { operand ->
+                    if(operand !is DataType.Byte){
+                        println("Expected operand to be of size data but was instead $operand")
+                        return@unaryOperator
+                    }
+                    binary.instructionPtr = operand.data.toInt()
+                }
                 InstructionSet.ADD -> binaryOperation{ left, right ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
@@ -527,6 +566,146 @@ class VM(val binary: Executable){
                         return@trinaryOperation
                     }
                     binary.instructionPtr = right.data.toInt()
+                }
+                InstructionSet.AND -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found $left")
+                        return@binaryOperation
+                    }
+                    when(right){
+                        is DataType.Byte -> {
+                            val result = memory.readByte(left.data) and right
+                            memory.writeByte(left.data, result)
+                        }
+                        is DataType.Word -> {
+                            val result = memory.readWord(left.data) and right
+                            memory.writeWord(left.data, result)
+                        }
+                        is DataType.DoubleWord -> {
+                            val result = memory.readDoubleWord(left.data) and right
+                            memory.writeDouble(left.data, result)
+                        }
+                        is DataType.QuadWord -> {
+                            val result = memory.readQuadWord(left.data) and right
+                            memory.writeQuad(left.data, result)
+                        }
+                    }
+                }
+                InstructionSet.OR -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found $left")
+                        return@binaryOperation
+                    }
+                    when(right){
+                        is DataType.Byte -> {
+                            val result = memory.readByte(left.data) or right
+                            memory.writeByte(left.data, result)
+                        }
+                        is DataType.Word -> {
+                            val result = memory.readWord(left.data) or right
+                            memory.writeWord(left.data, result)
+                        }
+                        is DataType.DoubleWord -> {
+                            val result = memory.readDoubleWord(left.data) or right
+                            memory.writeDouble(left.data, result)
+                        }
+                        is DataType.QuadWord -> {
+                            val result = memory.readQuadWord(left.data) or right
+                            memory.writeQuad(left.data, result)
+                        }
+                    }
+                }
+                InstructionSet.XOR -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found $left")
+                        return@binaryOperation
+                    }
+                    when(right){
+                        is DataType.Byte -> {
+                            val result = memory.readByte(left.data) xor right
+                            memory.writeByte(left.data, result)
+                        }
+                        is DataType.Word -> {
+                            val result = memory.readWord(left.data) xor right
+                            memory.writeWord(left.data, result)
+                        }
+                        is DataType.DoubleWord -> {
+                            val result = memory.readDoubleWord(left.data) xor right
+                            memory.writeDouble(left.data, result)
+                        }
+                        is DataType.QuadWord -> {
+                            val result = memory.readQuadWord(left.data) xor right
+                            memory.writeQuad(left.data, result)
+                        }
+                    }
+                }
+                InstructionSet.SHR -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found $left")
+                        return@binaryOperation
+                    }
+                    when(right){
+                        is DataType.Byte -> {
+                            val result = memory.readByte(left.data) shr right
+                            memory.writeByte(left.data, result)
+                        }
+                        is DataType.Word -> {
+                            val result = memory.readWord(left.data) shr right
+                            memory.writeWord(left.data, result)
+                        }
+                        is DataType.DoubleWord -> {
+                            val result = memory.readDoubleWord(left.data) shr right
+                            memory.writeDouble(left.data, result)
+                        }
+                        is DataType.QuadWord -> {
+                            val result = memory.readQuadWord(left.data) shr right
+                            memory.writeQuad(left.data, result)
+                        }
+                    }
+                }
+                InstructionSet.SHL -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found $left")
+                        return@binaryOperation
+                    }
+                    when(right){
+                        is DataType.Byte -> {
+                            val result = memory.readByte(left.data) shl right
+                            memory.writeByte(left.data, result)
+                        }
+                        is DataType.Word -> {
+                            val result = memory.readWord(left.data) shl right
+                            memory.writeWord(left.data, result)
+                        }
+                        is DataType.DoubleWord -> {
+                            val result = memory.readDoubleWord(left.data) shl right
+                            memory.writeDouble(left.data, result)
+                        }
+                        is DataType.QuadWord -> {
+                            val result = memory.readQuadWord(left.data) shl right
+                            memory.writeQuad(left.data, result)
+                        }
+                    }
+                }
+                InstructionSet.INV -> unaryOperator { operand ->
+                    when(operand){
+                        is DataType.Byte -> {
+                            val data = memory.readByte(operand.data).inv()
+                            memory.write(operand.data, data)
+                        }
+                        is DataType.Word -> {
+                            val data = memory.readWord(operand.data2.data).inv()
+                            memory.write(operand.data2.data, data)
+                        }
+                        is DataType.DoubleWord -> {
+                            val data = memory.readDoubleWord(operand.data2.data2.data)
+                            memory.write(operand.data2.data2.data, data)
+                        }
+                        is DataType.QuadWord -> {
+                            val data = memory.readQuadWord(operand.data2.data2.data2.data)
+                            memory.write(operand.data2.data2.data2.data, data)
+                        }
+                    }
                 }
             }
         }

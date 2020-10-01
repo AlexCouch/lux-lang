@@ -1,4 +1,5 @@
 import kotlin.experimental.and
+import kotlin.experimental.inv
 import kotlin.experimental.or
 import kotlin.experimental.xor
 
@@ -26,6 +27,9 @@ sealed class DataType{
                 is QuadWord -> Byte(other.data2.data2.data2.data xor data)
             }
 
+        override fun inv(): Byte =
+            Byte(data.inv())
+
         override fun shl(other: DataType): Byte =
             when(other){
                 is Byte -> Byte((other.data.toInt() shl data.toInt()).toByte())
@@ -36,10 +40,10 @@ sealed class DataType{
 
         override fun shr(other: DataType): Byte =
             when(other){
-                is Byte -> Byte((other.data.toInt() shr data.toInt()).toByte())
-                is Word -> Byte((other.data2.data.toInt() shr data.toInt()).toByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() shr data.toInt()).toByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() shr data.toInt()).toByte())
+                is Byte -> Byte((data.toInt() shr other.data.toInt()).toByte())
+                is Word -> Byte((data.toInt() shr other.data2.data.toInt()).toByte())
+                is DoubleWord -> Byte((data.toInt() shr other.data2.data2.data.toInt()).toByte())
+                is QuadWord -> Byte((data.toInt() shr other.data2.data2.data2.data.toInt()).toByte())
             }
 
         override fun plus(other: DataType): Byte =
@@ -121,6 +125,9 @@ sealed class DataType{
                 is DoubleWord -> Word(other.data2.data1 xor data1, other.data2.data2 xor data2)
                 is QuadWord -> Word(other.data2.data2.data1 xor data1, other.data2.data2.data2 xor data2)
             }
+
+        override fun inv(): Word =
+            Word(data1.inv(), data2.inv())
 
         override fun shl(other: DataType): Word =
             when(other){
@@ -229,6 +236,9 @@ sealed class DataType{
                 is DoubleWord -> DoubleWord(other.data1 xor data1, other.data2 xor data2)
                 is QuadWord -> DoubleWord(other.data2.data1 xor data1, other.data2.data2 xor data2)
             }
+
+        override fun inv(): DoubleWord =
+            DoubleWord(data1.inv(), data2.inv())
 
         override fun shl(other: DataType): DoubleWord =
             when(other){
@@ -368,6 +378,9 @@ sealed class DataType{
                 is DoubleWord -> QuadWord(data1, other xor data2)
                 is QuadWord -> QuadWord(other.data1 xor data1, other.data2 xor data2)
             }
+
+        override fun inv(): QuadWord =
+            QuadWord(data1.inv(), data2.inv())
 
         override fun shl(other: DataType): QuadWord =
             when(other){
@@ -509,6 +522,7 @@ sealed class DataType{
     abstract infix fun and(other: DataType): DataType
     abstract infix fun or(other: DataType): DataType
     abstract infix fun xor(other: DataType): DataType
+    abstract fun inv(): DataType
     abstract operator fun plus(other: DataType): DataType
     abstract operator fun minus(other: DataType): DataType
     abstract operator fun times(other: DataType): DataType

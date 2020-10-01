@@ -16,7 +16,7 @@
     - [x] JEQ  ;Jump if equal to
 * [ ] Rewrite parser so that it shares the same style of parsing as lux-lang compiler.
     - Abstract the parsing mechanism used in lux compiler so that lasm can use it as well
-* [ ] Pointer arithmetic
+* [ ] Pointer arithmetic and offsets
     - addr + addr, addr - addr, addr * addr, addr / addr
 * [ ] Finish implementing double word and quad word operations
     - movd, movq

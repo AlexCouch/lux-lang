@@ -247,7 +247,7 @@ class VM(val binary: Executable){
         }
     }
 
-    fun binaryOperation(block: (left: DataType.Byte, right: DataType) -> Unit){
+    fun binaryOperation(block: (left: DataType, right: DataType) -> Unit){
         val left = binary.nextByte()
         val leftInstr = InstructionSet.values().find { it.code == left.data }
         val leftValue = if(leftInstr != null){
@@ -291,6 +291,72 @@ class VM(val binary: Executable){
         block(leftValue, rightValue)
     }
 
+    fun trinaryOperation(block: (left: DataType, middle: DataType, right: DataType) -> Unit){
+        val left = binary.nextByte()
+        val leftInstr = InstructionSet.values().find { it.code == left.data }
+        val leftValue = if(leftInstr != null){
+            when(leftInstr){
+                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.REF -> {
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
+                }
+                else -> left
+            }
+        }else{
+            left
+        }
+        val middle = binary.nextByte()
+        val middleInstr = InstructionSet.values().find { it.code == middle.data }
+        val middleValue = if(middleInstr != null){
+            when(middleInstr){
+                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.REF -> {
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
+                }
+                InstructionSet.BYTE -> binary.nextByte()
+                InstructionSet.WORD -> binary.nextWord()
+                InstructionSet.DWORD -> binary.nextDoubleWord()
+                InstructionSet.QWORD -> binary.nextQuadWord()
+                else -> middle
+            }
+        }else{
+            middle
+        }
+        val right = binary.nextByte()
+        val rightInstr = InstructionSet.values().find { it.code == right.data }
+        val rightValue = if(rightInstr != null){
+            when(rightInstr){
+                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.REF -> {
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
+                }
+                InstructionSet.BYTE -> binary.nextByte()
+                InstructionSet.WORD -> binary.nextWord()
+                InstructionSet.DWORD -> binary.nextDoubleWord()
+                InstructionSet.QWORD -> binary.nextQuadWord()
+                else -> right
+            }
+        }else{
+            right
+        }
+        block(leftValue, middleValue, rightValue)
+    }
+
     fun run(){
         while(binary.hasNext()){
             val next = binary.next()
@@ -305,11 +371,20 @@ class VM(val binary: Executable){
                         println("Expected a data type of byte for right operand but instead got $right")
                         return@binaryOperation
                     }
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
+
                     memory.writeByte(left.data, memory.readByte(right.data))
                 }
                 InstructionSet.MOVB -> binaryOperation { left, right ->
                     if(right !is DataType.Byte){
                         println("Expected a data type of byte for right operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
                     memory.writeByte(left.data, right)
@@ -319,11 +394,19 @@ class VM(val binary: Executable){
                         println("Expected a data type of byte for right operand but instead got $right")
                         return@binaryOperation
                     }
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
                     memory.writeWord(left.data, right)
                 }
                 InstructionSet.MOVD -> binaryOperation{ left, right ->
                     if(right !is DataType.DoubleWord){
                         println("Expected a data type of byte for right operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
                     memory.writeDouble(left.data, right)
@@ -333,24 +416,44 @@ class VM(val binary: Executable){
                         println("Expected a data type of byte for right operand but instead got $right")
                         return@binaryOperation
                     }
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
                     memory.writeQuad(left.data, right)
                 }
                 InstructionSet.PUSH -> push()
                 InstructionSet.POP -> pop()
                 InstructionSet.JMP -> jump()
                 InstructionSet.ADD -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
                     val sum = memory.readByte(left.data) + right
                     memory.writeByte(left.data, sum)
                 }
                 InstructionSet.SUB -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
                     val diff = memory.readByte(left.data) - right
                     memory.writeByte(left.data, diff)
                 }
                 InstructionSet.MUL -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
                     val product = memory.readByte(left.data) * right
                     memory.writeByte(left.data, product)
                 }
                 InstructionSet.DIV -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
                     val quotient = memory.readByte(left.data) / right
                     memory.writeByte(left.data, quotient)
                 }
@@ -370,7 +473,61 @@ class VM(val binary: Executable){
                     val cmp = left > right
                     stack.push(DataType.Byte(if(cmp) 1 else 0))
                 }
-
+                InstructionSet.JEQ -> trinaryOperation{ left, middle, right ->
+                    val cmp = left == middle
+                    if(right !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@trinaryOperation
+                    }
+                    if(!cmp){
+                        return@trinaryOperation
+                    }
+                    binary.instructionPtr = right.data.toInt()
+                }
+                InstructionSet.JLE -> trinaryOperation{ left, middle, right ->
+                    val cmp = left <= middle
+                    if(right !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@trinaryOperation
+                    }
+                    if(!cmp){
+                        return@trinaryOperation
+                    }
+                    binary.instructionPtr = right.data.toInt()
+                }
+                InstructionSet.JLT -> trinaryOperation{ left, middle, right ->
+                    val cmp = left < middle
+                    if(right !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@trinaryOperation
+                    }
+                    if(!cmp){
+                        return@trinaryOperation
+                    }
+                    binary.instructionPtr = right.data.toInt()
+                }
+                InstructionSet.JGT -> trinaryOperation{ left, middle, right ->
+                    val cmp = left > middle
+                    if(right !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@trinaryOperation
+                    }
+                    if(!cmp){
+                        return@trinaryOperation
+                    }
+                    binary.instructionPtr = right.data.toInt()
+                }
+                InstructionSet.JGE -> trinaryOperation{ left, middle, right ->
+                    val cmp = left >= middle
+                    if(right !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@trinaryOperation
+                    }
+                    if(!cmp){
+                        return@trinaryOperation
+                    }
+                    binary.instructionPtr = right.data.toInt()
+                }
             }
         }
     }

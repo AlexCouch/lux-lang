@@ -169,4 +169,25 @@ enum class InstructionSet(val code: Byte){
      * 0 otherwise
      */
     GT(0xca.toByte()),
+
+    /**
+     * Jump if the first operand is equal to the second operand, to the target given by the third operand.
+     */
+    JEQ(0xd1.toByte()),
+    /**
+     * Jump if the first operand is less than the second operand, to the target given by the third operand.
+     */
+    JLT(0xd2.toByte()),
+    /**
+     * Jump if the first operand is less than or equal to the second operand, to the target given by the third operand.
+     */
+    JLE(0xd3.toByte()),
+    /**
+     * Jump if the first operand is greater than the second operand, to the target given by the third operand.
+     */
+    JGT(0xd4.toByte()),
+    /**
+     * Jump if the first operand is greater than or equal to the second operand, to the target given by the third operand.
+     */
+    JGE(0xd5.toByte()),
 }

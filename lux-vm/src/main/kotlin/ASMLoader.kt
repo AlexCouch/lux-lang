@@ -1001,7 +1001,7 @@ class ASMLoader(private val file: File){
 
     fun parseBinaryOperator(opcode: InstructionSet, tokens: TokenStream): Either<ByteArray, String>{
         val leftOperand = when(val next = tokens.next()){
-            is None -> return "Expected a left operand after DIV instruction but instead found EOF".right()
+            is None -> return "Expected a left operand after $opcode instruction but instead found EOF".right()
             is Some -> next.t
         }
         var bytes = byteArrayOf(opcode.code)
@@ -1051,7 +1051,154 @@ class ASMLoader(private val file: File){
         }
         //Parse the right operand
         val rightOperand = when(val next = tokens.next()){
-            is None -> return "Expected a right operand for MOV instruction but instead found EOF".right()
+            is None -> return "Expected a right operand for $opcode instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        when(rightOperand){
+            is Token.IdentifierToken -> {
+                val lexeme = rightOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme.isSizeModifier -> {
+                        when(lexeme){
+                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
+                    else -> return "Labels are not yet implemented!".right()
+                }
+            }
+            //TODO: See [parseRef]
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IntegerLiteralToken -> bytes += rightOperand.literal.toByte()
+            is Token.LongLiteralToken -> bytes += rightOperand.literal.toByte()
+            is Token.ShortLiteralToken -> bytes += rightOperand.literal.toByte()
+            is Token.ByteLiteralToken -> bytes += rightOperand.literal
+            else -> return "Expected either a memory address destination or REF".right()
+        }
+        return bytes.left()
+    }
+
+    fun parseTrinaryOperator(opcode: InstructionSet, tokens: TokenStream): Either<ByteArray, String>{
+        val leftOperand = when(val next = tokens.next()){
+            is None -> return "Expected a left operand after $opcode instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        var bytes = byteArrayOf(opcode.code)
+        when(leftOperand){
+            is Token.IdentifierToken -> {
+                val lexeme = leftOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> bytes += InstructionSet.TOP.code
+                    lexeme.isSizeModifier -> {
+                        when(lexeme){
+                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
+                }
+            }
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toByte()
+            is Token.LongLiteralToken -> bytes += leftOperand.literal.toByte()
+            is Token.ShortLiteralToken -> bytes += leftOperand.literal.toByte()
+            is Token.ByteLiteralToken -> bytes += leftOperand.literal
+            else -> return "Expected either a memory address destination or REF".right()
+        }
+        when(val next = tokens.next()){
+            is Some -> when(next.t){
+                is Token.CommaToken -> {}
+                else -> return "Expected a comma but instead found ${next.t}".right()
+            }
+            is None -> return "Expected a comma but instead found EOF".right()
+        }
+        //Parse the right operand
+        val middleOperand = when(val next = tokens.next()){
+            is None -> return "Expected a middle operand for $opcode instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        when(middleOperand){
+            is Token.IdentifierToken -> {
+                val lexeme = middleOperand.lexeme.toUpperCase()
+                when{
+                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme.isSizeModifier -> {
+                        when(lexeme){
+                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
+                    else -> return "Labels are not yet implemented!".right()
+                }
+            }
+            //TODO: See [parseRef]
+            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            is Token.IntegerLiteralToken -> bytes += middleOperand.literal.toByte()
+            is Token.LongLiteralToken -> bytes += middleOperand.literal.toByte()
+            is Token.ShortLiteralToken -> bytes += middleOperand.literal.toByte()
+            is Token.ByteLiteralToken -> bytes += middleOperand.literal
+            else -> return "Expected either a memory address destination or REF".right()
+        }
+        when(val next = tokens.next()){
+            is Some -> when(next.t){
+                is Token.CommaToken -> {}
+                else -> return "Expected a comma but instead found ${next.t}".right()
+            }
+            is None -> return "Expected a comma but instead found EOF".right()
+        }
+        val rightOperand = when(val next = tokens.next()){
+            is None -> return "Expected a right operand for $opcode instruction but instead found EOF".right()
             is Some -> next.t
         }
         when(rightOperand){
@@ -1172,7 +1319,26 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
-
+                            "JEQ" ->  bytes += when(val result = parseTrinaryOperator(InstructionSet.JEQ, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "JLT" ->  bytes += when(val result = parseTrinaryOperator(InstructionSet.JLT, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "JLE" ->  bytes += when(val result = parseTrinaryOperator(InstructionSet.JLE, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "JGT" ->  bytes += when(val result = parseTrinaryOperator(InstructionSet.JGT, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "JGE" ->  bytes += when(val result = parseTrinaryOperator(InstructionSet.JGT, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
                         }
                     }
                 }

@@ -218,195 +218,6 @@ class VM(val binary: Executable){
         }
     }
 
-    private fun move(){
-        val dest = binary.next()
-        val destInstr = InstructionSet.values().find { it.code == dest }
-        val destVal = if(destInstr != null){
-            when(destInstr){
-                InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Byte){
-                        println("Expected a destination of size byte but instead found size $ref")
-                        return
-                    }
-                    ref
-                }
-                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
-                    println("Destination must always be of size byte; no size modifiers allowed: $destInstr")
-                    return
-                }
-                else -> DataType.Byte(dest)
-            }
-        }else{
-            DataType.Byte(dest)
-        }
-        val target = binary.next()
-        val targetInstr = InstructionSet.values().find { it.code == target }
-        val targetVal = if(targetInstr != null){
-            when(targetInstr){
-                InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Byte){
-                        println("Expected a target of size byte but instead found size $ref")
-                        return
-                    }
-                    ref
-                }
-                InstructionSet.TOP -> DataType.Byte(stack.top)
-                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
-                    println("Target must always be of size byte; no size modifiers allowed: $destInstr")
-                    return
-                }
-                else -> DataType.Byte(target)
-            }
-        }else{
-            DataType.Byte(target)
-        }
-        memory.writeByte(destVal.data, memory.readByte(targetVal.data))
-    }
-
-    private fun moveByte(){
-        val dest = binary.next()
-        val destInstr = InstructionSet.values().find { it.code == dest }
-        val destVal = if(destInstr != null){
-            when(destInstr){
-                InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Byte){
-                        println("Expected a destination of size byte but instead found size $ref")
-                        return
-                    }
-                    ref
-                }
-                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
-                    println("Destination must always be of size byte; no size modifiers allowed: $destInstr")
-                    return
-                }
-                else -> DataType.Byte(dest)
-            }
-        }else{
-            DataType.Byte(dest)
-        }
-        val target = binary.next()
-        val targetInstr = InstructionSet.values().find { it.code == target }
-        val targetVal = if(targetInstr != null){
-            when(targetInstr){
-                InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Byte){
-                        println("Expected a target of size byte but instead found size $ref")
-                        return
-                    }
-                    ref
-                }
-                InstructionSet.TOP -> DataType.Byte(stack.top)
-                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
-                    println("Target must always be of size byte; no size modifiers allowed: $destInstr")
-                    return
-                }
-                else -> DataType.Byte(target)
-            }
-        }else{
-            DataType.Byte(target)
-        }
-        memory.writeByte(destVal.data, targetVal)
-    }
-
-    private fun moveWord(){
-        val dest = binary.next()
-        val destInstr = InstructionSet.values().find { it.code == dest }
-        val destVal = if(destInstr != null){
-            when(destInstr){
-                InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Byte){
-                        println("Expected a destination of size byte but instead found size $ref")
-                        return
-                    }
-                    ref
-                }
-                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
-                    println("Destination must always be of size byte; no size modifiers allowed: $destInstr")
-                    return
-                }
-                else -> DataType.Byte(dest)
-            }
-        }else{
-            DataType.Byte(dest)
-        }
-        val target = binary.next()
-        val targetInstr = InstructionSet.values().find { it.code == target }
-        val targetVal = if(targetInstr != null){
-            when(targetInstr){
-                InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Word){
-                        println("Expected a target of size byte but instead found size $ref")
-                        return
-                    }
-                    ref
-                }
-                InstructionSet.TOP -> DataType.Word(DataType.Byte(0), DataType.Byte(stack.top))
-                InstructionSet.BYTE, InstructionSet.WORD, InstructionSet.DWORD, InstructionSet.QWORD -> {
-                    println("Target must always be of size byte; no size modifiers allowed: $destInstr")
-                    return
-                }
-                else -> {
-                    binary.instructionPtr--
-                    binary.nextWord()
-                }
-            }
-        }else{
-            binary.instructionPtr--
-            binary.nextWord()
-        }
-        memory.writeWord(destVal.data, targetVal)
-    }
-
-    private fun moveDoubleWord(){
-        val dest = binary.next()
-        val destInstr = InstructionSet.values().find { it.code == dest }
-        val target = binary.nextDoubleWord()
-        val targetInstr = InstructionSet.values().find { it.code == target.data1.data1.data }
-        when{
-            targetInstr == null && destInstr == null -> {
-                memory.writeDouble(dest, target)
-            }
-            targetInstr != null && destInstr == null ->
-                when(targetInstr){
-                    InstructionSet.TOP -> {
-                        memory.writeByte(dest, DataType.Byte(InstructionSet.TOP.code))
-                    }
-                    else -> {
-                        println("Unknown memory address: $targetInstr")
-                        return
-                    }
-                }
-        }
-    }
-
-    private fun moveQuadWord(){
-        val dest = binary.next()
-        val destInstr = InstructionSet.values().find { it.code == dest }
-        val target = binary.nextQuadWord()
-        val targetInstr = InstructionSet.values().find { it.code == target.data1.data1.data1.data }
-        when{
-            targetInstr == null && destInstr == null -> {
-                memory.writeQuad(dest, target)
-            }
-            targetInstr != null && destInstr == null ->
-                when(targetInstr){
-                    InstructionSet.TOP -> {
-                        memory.writeByte(dest, DataType.Byte(InstructionSet.TOP.code))
-                    }
-                    else -> {
-                        println("Unknown memory address: $targetInstr")
-                        return
-                    }
-                }
-        }
-    }
-
     private fun push(){
         val data = binary.nextByte()
         val dataInstr = InstructionSet.values().find { it.code == data.data }
@@ -436,15 +247,19 @@ class VM(val binary: Executable){
         }
     }
 
-    private fun add(){
+    fun binaryOperation(block: (left: DataType.Byte, right: DataType) -> Unit){
         val left = binary.nextByte()
         val leftInstr = InstructionSet.values().find { it.code == left.data }
         val leftValue = if(leftInstr != null){
             when(leftInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    val addr = binary.nextByte()
-                    memory.readByte(addr.data)
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
                 }
                 else -> left
             }
@@ -457,8 +272,12 @@ class VM(val binary: Executable){
             when(rightInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    val addr = binary.nextByte()
-                    memory.readByte(addr.data)
+                    val ref = reference()
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
                 }
                 InstructionSet.BYTE -> binary.nextByte()
                 InstructionSet.WORD -> binary.nextWord()
@@ -469,122 +288,7 @@ class VM(val binary: Executable){
         }else{
             right
         }
-        val sum = memory.readByte(leftValue.data) + rightValue
-        memory.writeByte(left.data, sum)
-    }
-
-    private fun sub(){
-        val left = binary.nextByte()
-        val leftInstr = InstructionSet.values().find { it.code == left.data }
-        val leftValue = if(leftInstr != null){
-            when(leftInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
-                InstructionSet.REF -> {
-                    val addr = binary.nextByte()
-                    memory.readByte(addr.data)
-                }
-                else -> left
-            }
-        }else{
-            left
-        }
-        val right = binary.nextByte()
-        val rightInstr = InstructionSet.values().find { it.code == right.data }
-        val rightValue = if(rightInstr != null){
-            when(rightInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
-                InstructionSet.REF -> {
-                    val addr = binary.nextByte()
-                    memory.readByte(addr.data)
-                }
-                InstructionSet.BYTE -> binary.nextByte()
-                InstructionSet.WORD -> binary.nextWord()
-                InstructionSet.DWORD -> binary.nextDoubleWord()
-                InstructionSet.QWORD -> binary.nextQuadWord()
-                else -> right
-            }
-        }else{
-            right
-        }
-
-        val difference = memory.readByte(leftValue.data) - rightValue
-        memory.writeByte(left.data, difference)
-    }
-
-    private fun mul(){
-        val left = binary.nextByte()
-        val leftInstr = InstructionSet.values().find { it.code == left.data }
-        val leftValue = if(leftInstr != null){
-            when(leftInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
-                InstructionSet.REF -> {
-                    val addr = binary.nextByte()
-                    memory.readByte(addr.data)
-                }
-                else -> left
-            }
-        }else{
-            left
-        }
-        val right = binary.nextByte()
-        val rightInstr = InstructionSet.values().find { it.code == right.data }
-        val rightValue = if(rightInstr != null){
-            when(rightInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
-                InstructionSet.REF -> {
-                    val addr = binary.nextByte()
-                    memory.readByte(addr.data)
-                }
-                InstructionSet.BYTE -> binary.nextByte()
-                InstructionSet.WORD -> binary.nextWord()
-                InstructionSet.DWORD -> binary.nextDoubleWord()
-                InstructionSet.QWORD -> binary.nextQuadWord()
-                else -> right
-            }
-        }else{
-            right
-        }
-
-        val product = memory.readByte(leftValue.data) * rightValue
-        memory.writeByte(leftValue.data, product)
-    }
-
-    private fun div(){
-        val left = binary.nextByte()
-        val leftInstr = InstructionSet.values().find { it.code == left.data }
-        val leftValue = if(leftInstr != null){
-            when(leftInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
-                InstructionSet.REF -> {
-                    val addr = binary.nextByte()
-                    memory.readByte(addr.data)
-                }
-                else -> left
-            }
-        }else{
-            left
-        }
-        val right = binary.nextByte()
-        val rightInstr = InstructionSet.values().find { it.code == right.data }
-        val rightValue = if(rightInstr != null){
-            when(rightInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
-                InstructionSet.REF -> {
-                    val addr = binary.nextByte()
-                    memory.readByte(addr.data)
-                }
-                InstructionSet.BYTE -> binary.nextByte()
-                InstructionSet.WORD -> binary.nextWord()
-                InstructionSet.DWORD -> binary.nextDoubleWord()
-                InstructionSet.QWORD -> binary.nextQuadWord()
-                else -> right
-            }
-        }else{
-            right
-        }
-
-        val quotient = memory.readByte(leftValue.data) / rightValue
-        memory.writeByte(leftValue.data, quotient)
+        block(leftValue, rightValue)
     }
 
     fun run(){
@@ -596,18 +300,77 @@ class VM(val binary: Executable){
                 return
             }
             when(instr){
-                InstructionSet.MOVE -> move()
-                InstructionSet.MOVB -> moveByte()
-                InstructionSet.MOVW -> moveWord()
-                InstructionSet.MOVD -> moveDoubleWord()
-                InstructionSet.MOVL -> moveQuadWord()
+                InstructionSet.MOVE -> binaryOperation { left, right ->
+                    if(right !is DataType.Byte){
+                        println("Expected a data type of byte for right operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    memory.writeByte(left.data, memory.readByte(right.data))
+                }
+                InstructionSet.MOVB -> binaryOperation { left, right ->
+                    if(right !is DataType.Byte){
+                        println("Expected a data type of byte for right operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    memory.writeByte(left.data, right)
+                }
+                InstructionSet.MOVW -> binaryOperation{ left, right ->
+                    if(right !is DataType.Word){
+                        println("Expected a data type of byte for right operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    memory.writeWord(left.data, right)
+                }
+                InstructionSet.MOVD -> binaryOperation{ left, right ->
+                    if(right !is DataType.DoubleWord){
+                        println("Expected a data type of byte for right operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    memory.writeDouble(left.data, right)
+                }
+                InstructionSet.MOVQ -> binaryOperation{ left, right ->
+                    if(right !is DataType.QuadWord){
+                        println("Expected a data type of byte for right operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    memory.writeQuad(left.data, right)
+                }
                 InstructionSet.PUSH -> push()
                 InstructionSet.POP -> pop()
                 InstructionSet.JMP -> jump()
-                InstructionSet.ADD -> add()
-                InstructionSet.SUB -> sub()
-                InstructionSet.MUL -> mul()
-                InstructionSet.DIV -> div()
+                InstructionSet.ADD -> binaryOperation{ left, right ->
+                    val sum = memory.readByte(left.data) + right
+                    memory.writeByte(left.data, sum)
+                }
+                InstructionSet.SUB -> binaryOperation{ left, right ->
+                    val diff = memory.readByte(left.data) - right
+                    memory.writeByte(left.data, diff)
+                }
+                InstructionSet.MUL -> binaryOperation{ left, right ->
+                    val product = memory.readByte(left.data) * right
+                    memory.writeByte(left.data, product)
+                }
+                InstructionSet.DIV -> binaryOperation{ left, right ->
+                    val quotient = memory.readByte(left.data) / right
+                    memory.writeByte(left.data, quotient)
+                }
+                InstructionSet.LE -> binaryOperation{ left, right ->
+                    val cmp = left <= right
+                    stack.push(DataType.Byte(if(cmp) 1 else 0))
+                }
+                InstructionSet.LT -> binaryOperation{ left, right ->
+                    val cmp = left < right
+                    stack.push(DataType.Byte(if(cmp) 1 else 0))
+                }
+                InstructionSet.GE -> binaryOperation{ left, right ->
+                    val cmp = left >= right
+                    stack.push(DataType.Byte(if(cmp) 1 else 0))
+                }
+                InstructionSet.GT -> binaryOperation{ left, right ->
+                    val cmp = left > right
+                    stack.push(DataType.Byte(if(cmp) 1 else 0))
+                }
+
             }
         }
     }

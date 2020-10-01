@@ -4,7 +4,18 @@
 * [x] Redo the arithmetic operators so that they modify the destination (first operand) given the source data (second operand)
 * [x] Implement arithmetic operators into lasm
 * [ ] Implement comparison opcodes
-    - CMP, JLE, JGE, JE
+    - [x] CMP ;Equality comparison
+    - [x] GT ;Greater than
+    - [x] GE ;Greater than or equal to
+    - [x] LE ;Less than
+    - [x] LT ;Less than or equal to
+    - [ ] JLE ;Jump if less than or equal to
+    - [ ] JLT ;Jump if less than
+    - [ ] JGE ;Jump if greater than or equal to
+    - [ ] JGT ;Jump if greater than
+    - [ ] JE  ;Jump if equal to
+* [ ] Rewrite parser so that it shares the same style of parsing as lux-lang compiler.
+    - Abstract the parsing mechanism used in lux compiler so that lasm can use it as well
 * [ ] Pointer arithmetic
     - addr + addr, addr - addr, addr * addr, addr / addr
 * [ ] Finish implementing double word and quad word operations

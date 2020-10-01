@@ -78,7 +78,26 @@ sealed class DataType{
         override fun toWord(): Word = Word(Byte(0), this)
         override fun toDouble(): DoubleWord = DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), this))
         override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), Byte(0))), DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), this)))
-
+        override fun compareTo(other: DataType): Int {
+            return when(other){
+                is Byte -> this.data - other.data
+                is Word -> (this.data - other.data2.data) + (this.data - other.data1.data)
+                is DoubleWord ->
+                    (this.data - other.data2.data2.data) +
+                            (this.data - other.data2.data1.data) +
+                            (this.data - other.data1.data1.data) +
+                            (this.data - other.data2.data2.data)
+                is QuadWord ->
+                    (this.data - other.data2.data2.data2.data) +
+                            (this.data - other.data2.data2.data1.data) +
+                            (this.data - other.data2.data1.data2.data) +
+                            (this.data - other.data2.data1.data1.data) +
+                            (this.data - other.data1.data1.data1.data) +
+                            (this.data - other.data1.data2.data1.data) +
+                            (this.data - other.data1.data1.data2.data) +
+                            (this.data - other.data1.data2.data2.data)
+            }
+        }
     }
     data class Word(val data1: Byte, val data2: Byte): DataType(){
         override fun and(other: DataType): Word =
@@ -167,6 +186,26 @@ sealed class DataType{
         override fun toWord(): Word = this
         override fun toDouble(): DoubleWord = DoubleWord(Word(Byte(0), Byte(0)), this)
         override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), Byte(0))), DoubleWord(Word(Byte(0), Byte(0)), this))
+        override fun compareTo(other: DataType): Int {
+            return when(other){
+                is Byte -> this.data2.data - other.data
+                is Word -> (this.data2.data - other.data2.data) + (this.data1.data - other.data1.data)
+                is DoubleWord ->
+                    (this.data2.data - other.data2.data2.data) +
+                            (this.data2.data - other.data2.data1.data) +
+                            (this.data2.data - other.data1.data1.data) +
+                            (this.data2.data - other.data2.data2.data)
+                is QuadWord ->
+                    (this.data2.data - other.data2.data2.data2.data) +
+                            (this.data2.data - other.data2.data2.data1.data) +
+                            (this.data2.data - other.data2.data1.data2.data) +
+                            (this.data2.data - other.data2.data1.data1.data) +
+                            (this.data1.data - other.data1.data1.data1.data) +
+                            (this.data1.data - other.data1.data2.data1.data) +
+                            (this.data1.data - other.data1.data1.data2.data) +
+                            (this.data1.data - other.data1.data2.data2.data)
+            }
+        }
     }
     data class DoubleWord(val data1: Word, val data2: Word): DataType(){
         override fun and(other: DataType): DoubleWord =
@@ -255,6 +294,26 @@ sealed class DataType{
         override fun toWord(): Word = data2
         override fun toDouble(): DoubleWord = this
         override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), Byte(0))), this)
+        override fun compareTo(other: DataType): Int {
+            return when(other){
+                is Byte -> this.data2.data2.data - other.data
+                is Word -> (this.data2.data2.data - other.data2.data) + (this.data2.data2.data - other.data1.data)
+                is DoubleWord ->
+                    (this.data2.data2.data - other.data2.data2.data) +
+                            (this.data2.data2.data - other.data2.data1.data) +
+                            (this.data2.data1.data - other.data1.data1.data) +
+                            (this.data2.data1.data - other.data2.data2.data)
+                is QuadWord ->
+                    (this.data2.data2.data - other.data2.data2.data2.data) +
+                            (this.data2.data2.data - other.data2.data2.data1.data) +
+                            (this.data2.data1.data - other.data2.data1.data2.data) +
+                            (this.data2.data1.data - other.data2.data1.data1.data) +
+                            (this.data1.data1.data - other.data1.data1.data1.data) +
+                            (this.data1.data2.data - other.data1.data2.data1.data) +
+                            (this.data1.data1.data - other.data1.data1.data2.data) +
+                            (this.data1.data2.data - other.data1.data2.data2.data)
+            }
+        }
 
     }
     data class QuadWord(val data1: DoubleWord, val data2: DoubleWord): DataType(){
@@ -422,6 +481,26 @@ sealed class DataType{
         override fun toDouble(): DoubleWord = data2
         override fun toWord(): Word = data2.data2
         override fun toQuad(): QuadWord = this
+        override fun compareTo(other: DataType): Int {
+            return when(other){
+                is Byte -> this.data2.data2.data2.data - other.data
+                is Word -> (this.data2.data2.data2.data - other.data2.data) + (this.data2.data2.data1.data - other.data1.data)
+                is DoubleWord ->
+                    (this.data2.data2.data2.data - other.data2.data2.data) +
+                    (this.data2.data2.data1.data - other.data2.data1.data) +
+                    (this.data2.data1.data1.data - other.data1.data1.data) +
+                    (this.data2.data1.data2.data - other.data2.data2.data)
+                is QuadWord ->
+                    (this.data2.data2.data2.data - other.data2.data2.data2.data) +
+                            (this.data2.data2.data1.data - other.data2.data2.data1.data) +
+                            (this.data2.data1.data2.data - other.data2.data1.data2.data) +
+                            (this.data2.data1.data1.data - other.data2.data1.data1.data) +
+                            (this.data1.data1.data1.data - other.data1.data1.data1.data) +
+                            (this.data1.data2.data1.data - other.data1.data2.data1.data) +
+                            (this.data1.data1.data2.data - other.data1.data1.data2.data) +
+                            (this.data1.data2.data2.data - other.data1.data2.data2.data)
+            }
+        }
 
     }
 
@@ -434,6 +513,7 @@ sealed class DataType{
     abstract operator fun minus(other: DataType): DataType
     abstract operator fun times(other: DataType): DataType
     abstract operator fun div(other: DataType): DataType
+    abstract operator fun compareTo(other: DataType): Int
 
     abstract fun toByte(): Byte
     abstract fun toWord(): Word

@@ -49,7 +49,7 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  MOVD    0x0005  0x03a19b ;Move the integer 237979 of size long word into memory address 5
      */
-    MOVL(0xec.toByte()),
+    MOVQ(0xec.toByte()),
 
 
     /**
@@ -143,4 +143,30 @@ enum class InstructionSet(val code: Byte){
     WORD((0xc3 and 0xFF).toByte()),
     DWORD((0xc4 and 0xFF).toByte()),
     QWORD((0xc5 and 0xFF).toByte()),
+
+    /**
+     * Compares two operands and pushes a 1 onto the stack if they are the same, 0 otherwise
+     */
+    CMP(0xc6.toByte()),
+
+    /**
+     * Compares if the left operand is less than or equal to the operand on the right, pushing 1 on the stack if so,
+     * 0 otherwise
+     */
+    LE(0xc7.toByte()),
+    /**
+     * Compares if the left operand is less than the operand on the right, pushing 1 on the stack if so,
+     * 0 otherwise
+     */
+    LT(0xc8.toByte()),
+    /**
+     * Compares if the left operand is greater than or equal to the operand on the right, pushing 1 on the stack if so,
+     * 0 otherwise
+     */
+    GE(0xc9.toByte()),
+    /**
+     * Compares if the left operand is greater than the operand on the right, pushing 1 on the stack if so,
+     * 0 otherwise
+     */
+    GT(0xca.toByte()),
 }

@@ -453,20 +453,24 @@ class VM(val binary: Executable){
         }
         val right = binary.nextByte()
         val rightInstr = InstructionSet.values().find { it.code == right.data }
-        val rightValue = if(leftInstr != null){
+        val rightValue = if(rightInstr != null){
             when(rightInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
                     val addr = binary.nextByte()
                     memory.readByte(addr.data)
                 }
+                InstructionSet.BYTE -> binary.nextByte()
+                InstructionSet.WORD -> binary.nextWord()
+                InstructionSet.DWORD -> binary.nextDoubleWord()
+                InstructionSet.QWORD -> binary.nextQuadWord()
                 else -> right
             }
         }else{
             right
         }
-        val sum = leftValue + rightValue
-        stack.push(sum)
+        val sum = memory.readByte(leftValue.data) + rightValue
+        memory.writeByte(left.data, sum)
     }
 
     private fun sub(){
@@ -486,21 +490,25 @@ class VM(val binary: Executable){
         }
         val right = binary.nextByte()
         val rightInstr = InstructionSet.values().find { it.code == right.data }
-        val rightValue = if(leftInstr != null){
+        val rightValue = if(rightInstr != null){
             when(rightInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
                     val addr = binary.nextByte()
                     memory.readByte(addr.data)
                 }
+                InstructionSet.BYTE -> binary.nextByte()
+                InstructionSet.WORD -> binary.nextWord()
+                InstructionSet.DWORD -> binary.nextDoubleWord()
+                InstructionSet.QWORD -> binary.nextQuadWord()
                 else -> right
             }
         }else{
             right
         }
 
-        val difference = leftValue - rightValue
-        stack.push(difference)
+        val difference = memory.readByte(leftValue.data) - rightValue
+        memory.writeByte(left.data, difference)
     }
 
     private fun mul(){
@@ -520,21 +528,25 @@ class VM(val binary: Executable){
         }
         val right = binary.nextByte()
         val rightInstr = InstructionSet.values().find { it.code == right.data }
-        val rightValue = if(leftInstr != null){
+        val rightValue = if(rightInstr != null){
             when(rightInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
                     val addr = binary.nextByte()
                     memory.readByte(addr.data)
                 }
+                InstructionSet.BYTE -> binary.nextByte()
+                InstructionSet.WORD -> binary.nextWord()
+                InstructionSet.DWORD -> binary.nextDoubleWord()
+                InstructionSet.QWORD -> binary.nextQuadWord()
                 else -> right
             }
         }else{
             right
         }
 
-        val product = leftValue * rightValue
-        stack.push(product)
+        val product = memory.readByte(leftValue.data) * rightValue
+        memory.writeByte(leftValue.data, product)
     }
 
     private fun div(){
@@ -554,21 +566,25 @@ class VM(val binary: Executable){
         }
         val right = binary.nextByte()
         val rightInstr = InstructionSet.values().find { it.code == right.data }
-        val rightValue = if(leftInstr != null){
+        val rightValue = if(rightInstr != null){
             when(rightInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
                     val addr = binary.nextByte()
                     memory.readByte(addr.data)
                 }
+                InstructionSet.BYTE -> binary.nextByte()
+                InstructionSet.WORD -> binary.nextWord()
+                InstructionSet.DWORD -> binary.nextDoubleWord()
+                InstructionSet.QWORD -> binary.nextQuadWord()
                 else -> right
             }
         }else{
             right
         }
 
-        val quotient = leftValue / rightValue
-        stack.push(quotient)
+        val quotient = memory.readByte(leftValue.data) / rightValue
+        memory.writeByte(leftValue.data, quotient)
     }
 
     fun run(){

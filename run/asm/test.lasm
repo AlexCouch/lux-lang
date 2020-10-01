@@ -1,7 +1,6 @@
 movb 123, 0x15
-movb 10, 55
-push [123]
-push [10]
-pop
-pop
-jmp 0
+add 123, 0x05
+sub 123, 0x05
+add 123, 0x10
+mul 123, 3
+div 123, 4

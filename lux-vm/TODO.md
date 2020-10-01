@@ -1,6 +1,8 @@
 # TODO
 
 ## Version 0.0.2-prototype (Comparisons, Pointer Maths, Labels, Comments, Bitwise Opcodes)
+* [x] Redo the arithmetic operators so that they modify the destination (first operand) given the source data (second operand)
+* [x] Implement arithmetic operators into lasm
 * [ ] Implement comparison opcodes
     - CMP, JLE, JGE, JE
 * [ ] Pointer arithmetic

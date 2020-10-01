@@ -107,17 +107,22 @@ class Lexer(val input: String){
                                     }
                                 }
                             }
-                            tokens + buf.substringAfter("x").let {
-                                when(it.length){
-                                    2 -> Token.ByteLiteralToken(it.toByte(16), startPos, currentPos)
-                                    4 -> Token.ShortLiteralToken(it.toShort(16), startPos, currentPos)
-                                    8 -> Token.IntegerLiteralToken(it.toInt(16), startPos, currentPos)
-                                    16 -> Token.LongLiteralToken(it.toLong(16), startPos, currentPos)
-                                    else -> {
-                                        println("Hex literal too large. Only accepting up to 8 bytes in length, instead found ${it.length}")
-                                        return none()
+                            try{
+                                tokens + buf.substringAfter("x").let {
+                                    when(it.length){
+                                        2 -> Token.ByteLiteralToken(it.toByte(16), startPos, currentPos)
+                                        4 -> Token.ShortLiteralToken(it.toShort(16), startPos, currentPos)
+                                        8 -> Token.IntegerLiteralToken(it.toInt(16), startPos, currentPos)
+                                        16 -> Token.LongLiteralToken(it.toLong(16), startPos, currentPos)
+                                        else -> {
+                                            println("Hex literal wrong size. Only accepting up to 8 bytes in length, instead found ${it.length}")
+                                            return none()
+                                        }
                                     }
                                 }
+                            }catch(e: NumberFormatException){
+                                println(e.message)
+                                return none()
                             }
                         }
                         t.isDigit() -> {

@@ -113,3 +113,39 @@ Lux VM also enables a user to program the VM via a custom assembly language usin
         PUSH    [0x10]              ;Push data at address 0x10 to the stack
         JMP     [0x10]              ;Jump to index 2, which is stored in memory address 0x10 
         ```
+* LT
+    - Takes two operands, and checks if the left is less than the right
+    - Pushes a 1 if true, 0 otherwise, onto the stack
+    - Example:
+        ```
+        MOVB    5, 5    ;Write byte literal 5 into memory address 5 
+        ADD     5, 10   ;Add 10 to memory address 5
+        LT      [5], 10 ;This will push a 0 onto the stack since 15 is in memory address 5, and we are checking if data in memory address 5 is 15, and 15 > 10
+        ```
+* LE
+    - Takes two operands, and checks if the left is less than or equal to the right
+    - Pushes a 1 if true, 0 otherwise, onto the stack
+    - Example:
+        ```
+        MOVB    5, 5    ;Write byte literal 5 into memory address 5 
+        ADD     5, 10   ;Add 10 to memory address 5
+        LE      [5], 10 ;This will push a 0 onto the stack since 15 is in memory address 5, and we are checking if data in memory address 5 is 15, and 15 > 10
+        ```
+* GT
+    - Takes two operands, and checks if the left is gerater than the right
+    - Pushes a 1 if true, 0 otherwise, onto the stack
+    - Example:
+        ```
+        MOVB    5, 5    ;Write byte literal 5 into memory address 5 
+        ADD     5, 10   ;Add 10 to memory address 5
+        GT      [5], 10 ;This will push a 1 onto the stack since 15 is in memory address 5, and we are checking if data in memory address 5 is 15, and 15 > 10
+        ```
+* GE
+    - Takes two operands, and checks if the left is greater than or equal to the right
+    - Pushes a 1 if true, 0 otherwise, onto the stack
+    - Example:
+        ```
+        MOVB    5, 5    ;Write byte literal 5 into memory address 5 
+        ADD     5, 10   ;Add 10 to memory address 5
+        LT      [5], 10 ;This will push a 1 onto the stack since 15 is in memory address 5, and we are checking if data in memory address 5 is 15, and 15 > 10
+        ```

@@ -149,3 +149,35 @@ Lux VM also enables a user to program the VM via a custom assembly language usin
         ADD     5, 10   ;Add 10 to memory address 5
         LT      [5], 10 ;This will push a 1 onto the stack since 15 is in memory address 5, and we are checking if data in memory address 5 is 15, and 15 > 10
         ```
+* ADD
+    - Takes two operands, and adds the right to the data stored in the memory address given by left operand, and stores the result in the left operand
+    - Adding 5 to memory address 10, where address 10 contains value 3, then address 10 will then contain integer 8
+    - Example:
+        ```
+        MOVB    10, 3    ;Write byte literal 3 into memory address 10 
+        ADD     10, 5    ;Add 5 to memory address 10
+        ```
+* SUB
+    - Takes two operands, and subtracts the right to the data stored in the memory address given by left operand, and stores the result in the left operand
+    - Subtracting 5 to memory address 10, where address 10 contains value 8, then address 10 will then contain integer 3
+    - Example:
+        ```
+        MOVB    10, 8    ;Write byte literal 8 into memory address 10 
+        SUB     10, 5    ;Subtract 5 from memory address 10
+        ```
+* MUL
+    - Takes two operands, and multiplies the right by the data stored in the memory address given by left operand, and stores the result in the left operand
+    - Multiplying 5 by data in memory address 10, where address 10 contains value 3, then address 10 will then contain integer 15
+    - Example:
+        ```
+        MOVB    10, 3    ;Write byte literal 3 into memory address 10 
+        MUL     10, 5    ;Multiply 5 to by data in memory address 10
+        ```
+* DIV
+    - Takes two operands, and divides the right to the data stored in the memory address given by left operand, and stores the result in the left operand
+    - Dividing 3 by data in memory address 10, where address 10 contains value 15, then address 10 will then contain integer 5
+    - Example:
+        ```
+        MOVB    10, 15    ;Write byte literal 15 into memory address 10 
+        DIV     10, 5     ;Divide 3 by data in memory address 10
+        ```

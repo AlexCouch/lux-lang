@@ -23,6 +23,9 @@ class ASMLoader(private val file: File){
                 }
             }
         }
+
+    private var bytes = byteArrayOf()
+
     /**
      * A hashmap of labels where the key is the label name and the value is the index in memory
      *
@@ -52,10 +55,11 @@ class ASMLoader(private val file: File){
         }
         var bytes = byteArrayOf(InstructionSet.REF.code)
         when(next){
-            is Token.IntegerLiteralToken -> {
-                bytes += InstructionSet.BYTE.code
-                bytes += next.literal.toByte()
-            }
+            is Token.ByteLiteralToken, is Token.ShortLiteralToken, is Token.IntegerLiteralToken, is Token.LongLiteralToken ->
+                bytes += when(val result = parseIntegerToBytes(next)){
+                    is Either.Left -> result.a
+                    is Either.Right -> return result
+                }
             else -> return "Expected a memory address to reference, found $next".right()
         }
         when(val rbracket = tokens.next()){
@@ -75,7 +79,7 @@ class ASMLoader(private val file: File){
             is None -> return "Expected an integer value but instead found EOF".right()
         }
         when(next){
-            is Token.ByteLiteralToken -> bytes += next.literal
+            is Token.ByteLiteralToken -> bytes += next.literal.toByte() and 0xFF.toByte()
             is Token.ShortLiteralToken -> bytes += next.literal.toByte()
             is Token.IntegerLiteralToken -> bytes += next.literal.toByte()
             is Token.LongLiteralToken -> bytes += next.literal.toByte()
@@ -93,7 +97,7 @@ class ASMLoader(private val file: File){
         when(next){
             is Token.ByteLiteralToken -> {
                 bytes += 0
-                bytes += next.literal
+                bytes += next.literal.toByte() and 0xFF.toByte()
             }
             is Token.IntegerLiteralToken -> {
                 bytes += ((next.literal ushr 2) and 0xff00).toByte()
@@ -187,7 +191,7 @@ class ASMLoader(private val file: File){
             }
             is Token.ByteLiteralToken -> {
                 bytes += InstructionSet.BYTE.code
-                bytes += token.literal
+                bytes += token.literal.toByte() and 0xFF.toByte()
                 bytes.left()
             }
             is Token.ShortLiteralToken -> {
@@ -244,7 +248,12 @@ class ASMLoader(private val file: File){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
-            is Token.IdentifierToken -> return "Labels are not yet implemented!".right()
+            is Token.IdentifierToken -> {
+                if(operand.lexeme !in labels){
+                    return "Label ${operand.lexeme} does not exists".right()
+                }
+                bytes += labels[operand.lexeme]!!.toByte()
+            }
         }
         return bytes.left()
     }
@@ -278,6 +287,12 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
+                            else -> {
+                                if(leftOperand.lexeme !in labels){
+                                    return "Label ${leftOperand.lexeme} does not exists".right()
+                                }
+                                bytes += labels[leftOperand.lexeme]!!.toByte()
+                            }
                         }
                     }
                 }
@@ -287,7 +302,7 @@ class ASMLoader(private val file: File){
                 is Either.Right -> return result
             }
             is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toByte()
-            is Token.ByteLiteralToken -> bytes += leftOperand.literal
+            is Token.ByteLiteralToken -> bytes += leftOperand.literal.toByte() and 0xFF.toByte()
             else -> return "Expected either a memory address destination or REF".right()
         }
         when(val next = tokens.next()){
@@ -327,7 +342,12 @@ class ASMLoader(private val file: File){
                             }
                         }
                     }
-                    else -> return "Labels are not yet implemented!".right()
+                    else -> {
+                        if(rightOperand.lexeme !in labels){
+                            return "Label ${rightOperand.lexeme} does not exists".right()
+                        }
+                        bytes += labels[rightOperand.lexeme]!!.toByte()
+                    }
                 }
             }
             //TODO: See [parseRef]
@@ -374,6 +394,12 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
+                            else -> {
+                                if(leftOperand.lexeme !in labels){
+                                    return "Label ${leftOperand.lexeme} does not exists".right()
+                                }
+                                bytes += labels[leftOperand.lexeme]!!.toByte()
+                            }
                         }
                     }
                 }
@@ -383,7 +409,7 @@ class ASMLoader(private val file: File){
                 is Either.Right -> return result
             }
             is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toByte()
-            is Token.ByteLiteralToken -> bytes += leftOperand.literal
+            is Token.ByteLiteralToken -> bytes += leftOperand.literal.toByte() and 0xFF.toByte()
             else -> return "Expected either a memory address destination or REF".right()
         }
         when(val next = tokens.next()){
@@ -420,6 +446,12 @@ class ASMLoader(private val file: File){
                             "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
+                            }
+                            else -> {
+                                if(middleOperand.lexeme !in labels){
+                                    return "Label ${middleOperand.lexeme} does not exists".right()
+                                }
+                                bytes += labels[middleOperand.lexeme]!!.toByte()
                             }
                         }
                     }
@@ -474,7 +506,12 @@ class ASMLoader(private val file: File){
                             }
                         }
                     }
-                    else -> return "Labels are not yet implemented!".right()
+                    else -> {
+                        if(rightOperand.lexeme !in labels){
+                            return "Label ${rightOperand.lexeme} does not exists".right()
+                        }
+                        bytes += labels[rightOperand.lexeme]!!.toByte()
+                    }
                 }
             }
             //TODO: See [parseRef]
@@ -492,6 +529,15 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
+    private fun parseLabel(ident: Token.IdentifierToken): Option<String>{
+        val lexeme = ident.lexeme
+        if(lexeme in labels){
+            return "Label $lexeme already exists".some()
+        }
+        labels += lexeme to bytes.size
+        return none()
+    }
+
     private fun createErrorMessage(pos: TokenPos, msg: String): String =
         "${pos.pos.line}:${pos.pos.col}: $msg"
 
@@ -500,7 +546,6 @@ class ASMLoader(private val file: File){
             is Some -> result.t
             is None -> return "Failed to tokenize file, see console.".right()
         }
-        var bytes = byteArrayOf()
         while(tokens.hasNext()){
             when(val next = tokens.next()){
                 is Some -> when(next.t){
@@ -611,6 +656,19 @@ class ASMLoader(private val file: File){
                             "INV" -> bytes += when(val result = parseBinaryOperator(InstructionSet.INV, tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            else -> {
+                                if(tokens.peek is Some){
+                                    val peek = (tokens.peek as Some).t
+                                    if(peek is Token.ColonToken){
+                                        when(val result = parseLabel(ident)){
+                                            is Some -> return createErrorMessage(ident.startPos, result.t).right()
+                                            is None -> {}
+                                        }
+                                    }
+                                }else{
+                                    return createErrorMessage(ident.startPos, "Expected a token after identifier but instead found EOF").right()
+                                }
                             }
                         }
                     }

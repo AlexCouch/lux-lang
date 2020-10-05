@@ -40,6 +40,11 @@ class PrettyPrinter{
         append(short.toString())
     }
 
+    @ExperimentalUnsignedTypes
+    fun append(short: UByte){
+        append(short.toString())
+    }
+
     fun append(byte: Byte){
         append(byte.toString())
     }

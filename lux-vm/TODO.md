@@ -14,13 +14,11 @@
     - [x] JGE ;Jump if greater than or equal to
     - [x] JGT ;Jump if greater than
     - [x] JEQ  ;Jump if equal to
-* [ ] Rewrite parser so that it shares the same style of parsing as lux-lang compiler.
-    - Abstract the parsing mechanism used in lux compiler so that lasm can use it as well
-* [ ] Pointer arithmetic and offsets
-    - addr + addr, addr - addr, addr * addr, addr / addr
+* [x] Rewrite parser so that it is more robust and easier to implement new things.
+    - Make the parser simpler with a higher-order function for parsing certain kinds of instructions
 * [ ] Finish implementing double word and quad word operations
     - movd, movq
-* [ ] Implement labels
+* [x] Implement labels
     - ```
         some_label:
             mov 0x10, [0x5]
@@ -32,7 +30,7 @@
     - ```
         mov 0x10, [0x5] ;Move whatever is in the address stored in 0x5 to 0x10
       ```
-* [ ] Finish implementing bitwise opcodes and verify their operations are accurate and correct
+* [x] Finish implementing bitwise opcodes and verify their operations are accurate and correct
     - Make sure that the bitwise operations between different sized data makes sense and works as it should
     
 ## Version 0.0.3-prototype (FFI)

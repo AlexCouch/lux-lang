@@ -22,6 +22,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-cli-jvm:0.3")
     compile project(":tokenizer")
     compile project(":utils")
+    compile group: 'net.java.dev.jna', name: 'jna', version: '4.5.0'
 }
 
 jar {

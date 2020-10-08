@@ -1,10 +1,7 @@
-import kotlin.experimental.and
-import kotlin.experimental.inv
-import kotlin.experimental.or
-import kotlin.experimental.xor
-
+@ExperimentalUnsignedTypes
 sealed class DataType{
-    data class Byte(val data: kotlin.UByte): DataType(){
+    @ExperimentalUnsignedTypes
+    data class Byte(val data: UByte): DataType(){
         override fun and(other: DataType): Byte =
             when(other){
                 is Byte -> Byte(other.data and data)
@@ -65,9 +62,9 @@ sealed class DataType{
                     val diff = maskedDiff.toUByte()
                     Byte(diff)
                 }
-                is Word -> Byte((other.data2.data.toInt() - data.toInt()).toUByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() - data.toInt()).toUByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() - data.toInt()).toUByte())
+                is Word -> Byte((data - other.data2.data).toUByte())
+                is DoubleWord -> Byte((data - other.data2.data2.data).toUByte())
+                is QuadWord -> Byte((data - other.data2.data2.data2.data).toUByte())
             }
 
         override fun times(other: DataType): Byte =
@@ -80,9 +77,9 @@ sealed class DataType{
 
         override fun div(other: DataType): Byte =
             when(other){
-                is Byte -> Byte((other.data.toInt() / data.toInt()).toUByte())
-                is Word -> Byte((other.data2.data.toInt() / data.toInt()).toUByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() / data.toInt()).toUByte())
+                is Byte -> Byte((data / other.data ).toUByte())
+                is Word -> Byte((data / other.data2.data).toUByte())
+                is DoubleWord -> Byte((data / other.data2.data2.data).toUByte())
                 is QuadWord -> Byte((other.data2.data2.data2.data.toInt() / data.toInt()).toUByte())
             }
 
@@ -111,6 +108,7 @@ sealed class DataType{
             }
         }
     }
+    @ExperimentalUnsignedTypes
     data class Word(val data1: Byte, val data2: Byte): DataType(){
         override fun and(other: DataType): Word =
             when(other){
@@ -175,10 +173,10 @@ sealed class DataType{
 
         override fun minus(other: DataType): Word =
             when(other){
-                is Byte -> Word(data1, (other - data2))
-                is Word -> Word((other.data1 - data1), other.data2 - data2)
-                is DoubleWord -> Word((other.data2.data1 - data1), (other.data2.data2 - data2))
-                is QuadWord -> Word((other.data2.data2.data1 - data1), (other.data2.data2.data2 - data2))
+                is Byte -> Word(data1, (data2 - other))
+                is Word -> Word((data1 - other.data1), data2 - other.data2)
+                is DoubleWord -> Word((data1 - other.data2.data1), (data2 - other.data2.data2))
+                is QuadWord -> Word((data1 - other.data2.data2.data1), (data2 - other.data2.data2.data2))
             }
 
         override fun times(other: DataType): Word =
@@ -191,10 +189,10 @@ sealed class DataType{
 
         override fun div(other: DataType): Word =
             when(other){
-                is Byte -> Word(data1, (other + data2))
-                is Word -> Word((other.data1 / data1), other.data2 / data2)
-                is DoubleWord -> Word((other.data2.data1 / data1), (other.data2.data2 / data2))
-                is QuadWord -> Word((other.data2.data2.data1 / data1), (other.data2.data2.data2 / data2))
+                is Byte -> Word(data1, (data2 / other))
+                is Word -> Word((data1 / other.data1), data2 / other.data2)
+                is DoubleWord -> Word((other.data2.data1 / data1), (data2 / other.data2.data2))
+                is QuadWord -> Word((data1 / other.data2.data2.data1), (data2 / other.data2.data2.data2))
             }
 
         override fun toByte(): Byte = data2
@@ -222,6 +220,7 @@ sealed class DataType{
             }
         }
     }
+    @ExperimentalUnsignedTypes
     data class DoubleWord(val data1: Word, val data2: Word): DataType(){
         override fun and(other: DataType): DoubleWord =
             when(other){
@@ -334,6 +333,7 @@ sealed class DataType{
         }
 
     }
+    @ExperimentalUnsignedTypes
     data class QuadWord(val data1: DoubleWord, val data2: DoubleWord): DataType(){
         override fun and(other: DataType): QuadWord =
             when(other){

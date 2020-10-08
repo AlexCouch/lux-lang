@@ -4,6 +4,8 @@ import kotlin.experimental.and
 
 val String.isSizeModifier: Boolean get() = this in arrayOf("BYTE", "WORD", "DWORD", "QWORD")
 
+@ExperimentalUnsignedTypes
+@Suppress("EXPERIMENTAL_UNSIGNED_LITERALS")
 class ASMLoader(private val file: File){
     private val lexer = Lexer(file.readText())
 
@@ -138,9 +140,9 @@ class ASMLoader(private val file: File){
         }
         when(next){
             is Token.ByteLiteralToken -> bytes += next.literal.toUByte() and 0xFF.toUByte()
-            is Token.ShortLiteralToken -> bytes += next.literal.toUByte()
-            is Token.IntegerLiteralToken -> bytes += next.literal.toUByte()
-            is Token.LongLiteralToken -> bytes += next.literal.toUByte()
+            is Token.ShortLiteralToken -> return "Expected data of size byte or smaller, instead found word".right()
+            is Token.IntegerLiteralToken -> return "Expected data of size byte or smaller, instead found double word".right()
+            is Token.LongLiteralToken -> return "Expected data of size byte or smaller, instead found quad word".right()
             else -> return "Expected an integer literal but instead found $next".right()
         }
         return bytes.left()
@@ -161,73 +163,89 @@ class ASMLoader(private val file: File){
                 bytes += ((next.literal ushr 2) and 0xff00).toUByte()
                 bytes += (next.literal and 0x00ff).toUByte()
             }
-            is Token.ShortLiteralToken -> {
-                bytes += ((next.literal.toInt() ushr 2) and 0xff).toUByte()
-                bytes += (next.literal and 0xff).toUByte()
-            }
-            is Token.LongLiteralToken -> {
-                bytes += ((next.literal.toInt() ushr 2) and 0xff).toUByte()
-                bytes += (next.literal and 0xff).toUByte()
-            }
+            is Token.ShortLiteralToken -> return "Expected data of size word or smaller, instead found double word".right()
+            is Token.LongLiteralToken -> return "Expected data of size word or smaller, instead found quad word".right()
         }
         return bytes.left()
     }
 
     fun writeDoubleWord(tokens: TokenStream): Either<UByteArray, String>{
-        var bytes = ubyteArrayOf(InstructionSet.WORD.code)
+        var bytes = ubyteArrayOf(InstructionSet.DWORD.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
         }
         when(next){
-            is Token.IntegerLiteralToken -> {
-                bytes += 0.toUByte()
-                bytes += ((next.literal and 0x00ff0000) shl 4).toUByte()
-                bytes += ((next.literal and 0x0000ff00) shl 2).toUByte()
-                bytes += (next.literal and 0x000000ff).toUByte()
+            is Token.ByteLiteralToken -> {
+                bytes += 0u
+                bytes += 0u
+                bytes += 0u
+                bytes += (next.literal).toUByte()
             }
+            is Token.ShortLiteralToken -> {
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += ((next.literal.toInt() shl 8) and 0xff).toUByte()
+                bytes += next.literal.toUByte()
+            }
+            is Token.IntegerLiteralToken -> {
+                bytes += ((next.literal shl 24) and 0xff).toUByte()
+                bytes += ((next.literal shl 16) and 0xff).toUByte()
+                bytes += ((next.literal shl 8) and 0xff).toUByte()
+                bytes += (next.literal and 0xff).toUByte()
+            }
+            is Token.LongLiteralToken -> return "Expected data of size double word or smaller, instead found quad word".right()
             else -> return "Expected an integer literal but instead found $next".right()
         }
         return bytes.left()
     }
 
-    /**
-     * TODO:
-     *  The tokenizer currently does not recognize hexidecimal of any sort. The tokenizer needs to be able to recognize
-     *  them in order for [writeQuadWord] and [writeDoubleWord] to work properly so for now these are WIP
-     */
     fun writeQuadWord(tokens: TokenStream): Either<UByteArray, String>{
-        var bytes = ubyteArrayOf(InstructionSet.WORD.code)
+        var bytes = ubyteArrayOf(InstructionSet.QWORD.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
         }
         when(next){
+            is Token.ByteLiteralToken -> {
+                bytes += 0u
+                bytes += 0u
+                bytes += 0u
+                bytes += 0u
+                bytes += 0u
+                bytes += 0u
+                bytes += 0u
+                bytes += (next.literal).toUByte()
+            }
+            is Token.ShortLiteralToken -> {
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += ((next.literal.toInt() shl 8) and 0xff).toUByte()
+                bytes += next.literal.toUByte()
+            }
             is Token.IntegerLiteralToken -> {
-                when{
-                    next.literal > 0xff -> {
-                        bytes += 0.toUByte()
-                        bytes += 0.toUByte()
-                        bytes += ((next.literal and 0xff00) shl 2).toUByte()
-                        bytes += (next.literal and 0x00ff).toUByte()
-                    }
-                    next.literal > 0xffff -> {
-                        bytes += ((next.literal.toLong() and 0xff0000000000000) shl 16).toUByte()
-                        bytes += ((next.literal.toLong() and 0x00ff000000) shl 12).toUByte()
-                        bytes += ((next.literal and 0x0000ff00) shl 2).toUByte()
-                        bytes += (next.literal and 0x000000ff).toUByte()
-                        bytes += ((next.literal.toLong() and 0xff000000) shl 8).toUByte()
-                        bytes += ((next.literal and 0x00ff0000) shl 4).toUByte()
-                        bytes += ((next.literal and 0x0000ff00) shl 2).toUByte()
-                        bytes += (next.literal and 0x000000ff).toUByte()
-                    }
-                    else -> {
-                        bytes += 0.toUByte()
-                        bytes += 0.toUByte()
-                        bytes += 0.toUByte()
-                        bytes += next.literal.toUByte()
-                    }
-                }
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += 0.toUByte()
+                bytes += ((next.literal shl 24) and 0xff).toUByte()
+                bytes += ((next.literal shl 16) and 0xff).toUByte()
+                bytes += ((next.literal shl 8) and 0xff).toUByte()
+                bytes += (next.literal and 0xff).toUByte()
+            }
+            is Token.LongLiteralToken -> {
+                bytes += ((next.literal shl 56) and 0xff).toUByte()
+                bytes += ((next.literal shl 48) and 0xff).toUByte()
+                bytes += ((next.literal shl 40) and 0xff).toUByte()
+                bytes += ((next.literal shl 32) and 0xff).toUByte()
+                bytes += ((next.literal shl 24) and 0xff).toUByte()
+                bytes += ((next.literal shl 16) and 0xff).toUByte()
+                bytes += ((next.literal shl 8) and 0xff).toUByte()
+                bytes += (next.literal and 0xff).toUByte()
             }
             else -> return "Expected an integer literal but instead found $next".right()
         }

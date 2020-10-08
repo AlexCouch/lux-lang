@@ -236,39 +236,10 @@ class VM(val binary: Executable){
                         else -> memory.readByte(next)
                     }
                 }else{
-                    memory.readByte(next)
+                    memory.readByte(n)
                 }
             }
             else -> memory.readByte(next)
-        }
-    }
-
-    private fun push(){
-        val data = binary.nextByte()
-        val dataInstr = InstructionSet.values().find { it.code == data.data }
-        val dataVal = if(dataInstr != null){
-            when(dataInstr){
-                InstructionSet.REF -> reference()
-                else -> data
-            }
-        }else{
-            data
-        }
-        stack.push(dataVal)
-    }
-
-    private fun pop(){
-        stack.pop()
-    }
-
-    private fun jump(){
-        val location = binary.next()
-        val locInstr = InstructionSet.values().find { it.code == location }
-        if(locInstr == null){
-            binary.instructionPtr = location.toInt()
-        }
-        when(locInstr){
-            InstructionSet.TOP -> binary.instructionPtr = stack.top.toInt()
         }
     }
 
@@ -344,12 +315,7 @@ class VM(val binary: Executable){
             when(leftInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Byte){
-                        println("Expected a destination of size byte but instead found size $ref")
-                        return
-                    }
-                    ref
+                    reference()
                 }
                 else -> left
             }
@@ -475,7 +441,7 @@ class VM(val binary: Executable){
                 InstructionSet.PUSH -> unaryOperator{ operand ->
                     stack.push(operand)
                 }
-                InstructionSet.POP -> pop()
+                InstructionSet.POP -> stack.pop()
                 InstructionSet.JMP -> unaryOperator { operand ->
                     if(operand !is DataType.Byte){
                         println("Expected operand to be of size data but was instead $operand")
@@ -488,32 +454,52 @@ class VM(val binary: Executable){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
-                    val sum = memory.readByte(left.data) + right
-                    memory.writeByte(left.data, sum)
+                    val sum = when(right){
+                        is DataType.Byte -> memory.readByte(left.data) + right
+                        is DataType.Word -> memory.readWord(left.data) + right
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data) + right
+                        is DataType.QuadWord -> memory.readQuadWord(left.data) + right
+                    }
+                    memory.write(left.data, sum)
                 }
                 InstructionSet.SUB -> binaryOperation{ left, right ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
-                    val diff = memory.readByte(left.data) - right
-                    memory.writeByte(left.data, diff)
+                    val diff = when(right){
+                        is DataType.Byte ->  right - memory.readByte(left.data)
+                        is DataType.Word -> right - memory.readWord(left.data)
+                        is DataType.DoubleWord -> right - memory.readDoubleWord(left.data)
+                        is DataType.QuadWord -> right - memory.readQuadWord(left.data)
+                    }
+                    memory.write(left.data, diff)
                 }
                 InstructionSet.MUL -> binaryOperation{ left, right ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
-                    val product = memory.readByte(left.data) * right
-                    memory.writeByte(left.data, product)
+                    val product = when(right){
+                        is DataType.Byte -> memory.readByte(left.data) * right
+                        is DataType.Word -> memory.readWord(left.data) * right
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data) * right
+                        is DataType.QuadWord -> memory.readQuadWord(left.data) * right
+                    }
+                    memory.write(left.data, product)
                 }
                 InstructionSet.DIV -> binaryOperation{ left, right ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
-                    val quotient = memory.readByte(left.data) / right
-                    memory.writeByte(left.data, quotient)
+                    val quotient = when(right){
+                        is DataType.Byte -> right / memory.readByte(left.data)
+                        is DataType.Word -> right / memory.readWord(left.data)
+                        is DataType.DoubleWord -> right / memory.readDoubleWord(left.data)
+                        is DataType.QuadWord -> right / memory.readQuadWord(left.data)
+                    }
+                    memory.write(left.data, quotient)
                 }
                 InstructionSet.LE -> binaryOperation{ left, right ->
                     val cmp = left <= right

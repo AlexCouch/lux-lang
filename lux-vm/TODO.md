@@ -45,6 +45,8 @@
     
     - This will ensure that any time that signed data is never specified, then we will always have the unsigned data available for use for unsigned operations
 
+* [ ] Add overflow logic to data arithmetics so that if a byte overflows then we reset that byte and flow into the next byte (words, dwords, qwords)
+
 ## Version 0.0.3-prototype (FFI)
 * [ ] Implement sections
     - ```

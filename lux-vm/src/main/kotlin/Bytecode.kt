@@ -1,4 +1,4 @@
-enum class InstructionSet(val code: Byte){
+enum class InstructionSet(val code: UByte){
     /**
      * Move the given data into the given address
      *
@@ -8,7 +8,7 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  MOVE    0x0005  0x0010 ;Move the data at memory address 16 into the address 5
      */
-    MOVE(0xff.toByte()),
+    MOVE(0xff.toUByte()),
 
     /**
      * Move the given byte data into the given address
@@ -19,7 +19,7 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  MOVB    0x0005  0xa ;Move the integer 9 of size byte into memory address 5
      */
-    MOVB(0xef.toByte()),
+    MOVB(0xef.toUByte()),
     /**
      * Move the given word data into the given address
      *
@@ -29,7 +29,7 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  MOVW    0x0005  0xa1 ;Move the integer 161 of size word into memory address 5
      */
-    MOVW(0xee.toByte()),
+    MOVW(0xee.toUByte()),
     /**
      * Move the given double word data into the given address
      *
@@ -39,7 +39,7 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  MOVD    0x0005  0x03a1 ;Move the integer 929 of size double word into memory address 5
      */
-    MOVD(0xed.toByte()),
+    MOVD(0xed.toUByte()),
     /**
      * Move the given long word data into the given address
      *
@@ -49,7 +49,7 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  MOVD    0x0005  0x03a19b ;Move the integer 237979 of size long word into memory address 5
      */
-    MOVQ(0xec.toByte()),
+    MOVQ(0xec.toUByte()),
 
 
     /**
@@ -58,7 +58,7 @@ enum class InstructionSet(val code: Byte){
      *
      * No operands
      */
-    JMP(0xfe.toByte()),
+    JMP(0xfe.toUByte()),
     /**
      * PUSH the data at the given address onto the stack as a copy. This will be popped at the end of the frame if we
      * pop the current frame, via pushing 0xff, we push the current instruction poiter onto the stack, which can then be
@@ -68,18 +68,18 @@ enum class InstructionSet(val code: Byte){
      *  Data type followed by data itself
      *
      */
-    PUSH(0xfd.toByte()),
+    PUSH(0xfd.toUByte()),
 
     /**
      * POP the data at the top of the stack, which then gets deallocated.
      */
-    POP(0xfc.toByte()),
+    POP(0xfc.toUByte()),
 
     /**
      * A pointer to the top of the stack. This is so that we can get whatever is on the top of the stack and use it for something
      * such as moving that data somewhere else or using it as a jump target
      */
-    TOP(0xb0.toByte()),
+    TOP(0xb0.toUByte()),
 
     /**
      * Takes the two given operands (left is first, right is second) and adds them together and stores on the top
@@ -92,7 +92,7 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  ADD     TOP, 3
      */
-    ADD(0xa0.toByte()),
+    ADD(0xa0.toUByte()),
     /**
      * Takes the two given operands (left is first, right is second) and subtracts the right from the left and stores on the top
      * of the stack
@@ -104,7 +104,7 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  SUB     TOP, 3
      */
-    SUB(0xa1.toByte()),
+    SUB(0xa1.toUByte()),
     /**
      * Takes the two given operands (left is first, right is second) and multiples them together and stores on the top
      * of the stack
@@ -117,12 +117,12 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  MUL     TOP, 3
      */
-    MUL(0xa2.toByte()),
+    MUL(0xa2.toUByte()),
     /**
      * Takes the two given operands (left is first, right is second) and divides left from the right and stores on the top
      * of the stack
      */
-    DIV(0xa3.toByte()),
+    DIV(0xa3.toUByte()),
 
     /**
      * This is an operand modifier which allows us to specify that the current operand is a reference to some place
@@ -131,93 +131,93 @@ enum class InstructionSet(val code: Byte){
      * Example:
      *  ADD     REF 5,  10 ;Add 10 to whatever is stored in memory address 10 and push it onto the stack
      */
-    REF((0xc0 and 0xFF).toByte()),
+    REF((0xc0 and 0xFF).toUByte()),
 
     /**
      * The current pointer in the instruction. This can be used for saving stack frames
      * and returning back to a call site.
      */
-    INSPTR((0xc1 and 0xFF).toByte()),
+    INSPTR((0xc1 and 0xFF).toUByte()),
 
-    BYTE((0xc2 and 0xFF).toByte()),
-    WORD((0xc3 and 0xFF).toByte()),
-    DWORD((0xc4 and 0xFF).toByte()),
-    QWORD((0xc5 and 0xFF).toByte()),
+    BYTE((0xc2 and 0xFF).toUByte()),
+    WORD((0xc3 and 0xFF).toUByte()),
+    DWORD((0xc4 and 0xFF).toUByte()),
+    QWORD((0xc5 and 0xFF).toUByte()),
 
     /**
      * Compares two operands and pushes a 1 onto the stack if they are the same, 0 otherwise
      */
-    CMP(0xc6.toByte()),
+    CMP(0xc6.toUByte()),
 
     /**
      * Compares if the left operand is less than or equal to the operand on the right, pushing 1 on the stack if so,
      * 0 otherwise
      */
-    LE(0xc7.toByte()),
+    LE(0xc7.toUByte()),
     /**
      * Compares if the left operand is less than the operand on the right, pushing 1 on the stack if so,
      * 0 otherwise
      */
-    LT(0xc8.toByte()),
+    LT(0xc8.toUByte()),
     /**
      * Compares if the left operand is greater than or equal to the operand on the right, pushing 1 on the stack if so,
      * 0 otherwise
      */
-    GE(0xc9.toByte()),
+    GE(0xc9.toUByte()),
     /**
      * Compares if the left operand is greater than the operand on the right, pushing 1 on the stack if so,
      * 0 otherwise
      */
-    GT(0xca.toByte()),
+    GT(0xca.toUByte()),
 
     /**
      * Jump if the first operand is equal to the second operand, to the target given by the third operand.
      */
-    JEQ(0xd1.toByte()),
+    JEQ(0xd1.toUByte()),
     /**
      * Jump if the first operand is less than the second operand, to the target given by the third operand.
      */
-    JLT(0xd2.toByte()),
+    JLT(0xd2.toUByte()),
     /**
      * Jump if the first operand is less than or equal to the second operand, to the target given by the third operand.
      */
-    JLE(0xd3.toByte()),
+    JLE(0xd3.toUByte()),
     /**
      * Jump if the first operand is greater than the second operand, to the target given by the third operand.
      */
-    JGT(0xd4.toByte()),
+    JGT(0xd4.toUByte()),
     /**
      * Jump if the first operand is greater than or equal to the second operand, to the target given by the third operand.
      */
-    JGE(0xd5.toByte()),
+    JGE(0xd5.toUByte()),
 
     /**
      * Takes a memory address as left operand, and does a bitwise AND on its value with the right operand, then
      * saving the result in the given address.
      */
-    AND(0x90.toByte()),
+    AND(0x90.toUByte()),
     /**
      * Takes a memory address as left operand, and does a bitwise OR on its value with the right operand, then
      * saving the result in the given address.
      */
-    OR(0x91.toByte()),
+    OR(0x91.toUByte()),
     /**
      * Takes a memory address as left operand, and does a bitwise XOR on its value with the right operand, then
      * saving the result in the given address.
      */
-    XOR(0x92.toByte()),
+    XOR(0x92.toUByte()),
     /**
      * Takes a memory address as operand and does a bitwise inversion on its operators
      */
-    INV(0x93.toByte()),
+    INV(0x93.toUByte()),
     /**
      * Takes a memory address as left operand, and does a bitwise right shift on its value with the right operand, then
      * saving the result in the given address.
      */
-    SHR(0x94.toByte()),
+    SHR(0x94.toUByte()),
     /**
      * Takes a memory address as left operand, and does a bitwise left shift on its value with the right operand, then
      * saving the result in the given address.
      */
-    SHL(0x95.toByte()),
+    SHL(0x95.toUByte()),
 }

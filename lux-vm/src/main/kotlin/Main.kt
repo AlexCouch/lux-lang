@@ -39,7 +39,7 @@ fun main(args: Array<String>){
             exec
         }
         "lexe" -> {
-            Executable(file.readBytes())
+            Executable(file.readBytes().toTypedArray().map { it.toUByte() }.toTypedArray())
         }
         else -> {
             println("Unrecognized extension ${file.extension}: Please use either lasm or lexe")
@@ -48,4 +48,5 @@ fun main(args: Array<String>){
     }
     val vm = VM(exec)
     vm.run()
+
 }

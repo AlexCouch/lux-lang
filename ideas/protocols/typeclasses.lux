@@ -1,0 +1,43 @@
+protocol Eq
+	def equals(self, other: dyn) -> bool
+
+protocol Plus
+	def plus(self, other: dyn) -> dyn
+
+protocol PlusAssign
+	def plusAssign(self, other: dyn) -> dyn
+
+protocol Minus
+	def minus(self, other: dyn) -> dyn
+
+protocol MinusAssign
+	def minusAssign(self, other: dyn) -> dyn
+
+protocol Mul
+	def multiply(self, other: dyn) -> dyn
+
+protocol MulAssign
+	def multiplyAssign(self, other: dyn) -> dyn
+
+protocol Div
+	def divide(self, other: dyn) -> dyn
+
+protocol DivAssign
+	def divideAssign(self, other: dyn) -> dyn
+
+class List<T>
+	init(self, max_capacity: int)
+		self.contents: [T;max_capacity] = []
+
+	init(self)
+		self.init(int.max_int)
+
+impl<T> Plus(List<T>)
+	def plus(self, other: T) -> Self
+		self.contents = [self.contents; other]
+
+impl<T> Minus(List<T>)
+	def minus(self, other: int) -> Self
+		head = self.contents[0:other] #Get the head of the list up until the given index `other`
+		tail = self.contents[other+1:] #Get the tail from after the given index `other` and beyond
+		self.contents = [head;tail]

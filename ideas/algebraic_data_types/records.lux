@@ -1,0 +1,82 @@
+record Message
+	case Join
+	case Say
+		message: str
+	case Whisper
+		person: Person
+		message: str
+	case Leave
+
+#client:
+def joinServer():
+	...
+	server.send(Message.Join())
+	...
+
+#server:
+def send(message: Message)
+	socket.write(json.dumps(message))
+
+def send(message: Message)
+	when message
+		Message.Join => socket.write('JOIN')
+		Message.Leave => socket.write('LEAVE')
+		Message.Say(message) => socket.write('SAY $message')
+		Message.Whisper(person, message) => socket.write('WHISPER "$message" name: ${person.name}, age: ${person.age}')
+
+def sendMessage(message: str):
+	server.send(Message.Say(message))
+	...
+
+def sendWhisper(message: str, target: Person):
+	server.send(Message.Whisper(target, str))
+
+def leaveServer():
+	server.send(Message.Leave())
+
+#Server
+
+##Frame name TCPServer:receive
+def receive()
+	recv = socket.receive(5)
+	if IOResult.Ok(bytes) = recv
+		message = json.loads(bytes.decode())
+		processMessage(message)
+
+def receive()
+	return if IOResult.Ok(bytes) = socket.receive(5)
+		message = when bytes
+			b'JOIN' => Message.Join()
+			b'LEAVE' => Message.Leave()
+			else => do
+				when
+					'SAY' in bytes => do
+						match = re.match(r'SAY "([\w\d\s]*)"', bytes)
+						if match is None
+							Result.Trace(here, 'Failed to match against SAY command: invalid message format ${bytes}'
+						say = match.group(1)
+						Message.Say(say)
+					end
+					'WHISPER' in bytes => do
+						match = re.match(r'SAY "([\w\d\s]*)" name: (\w+), age: (\d+)', bytes)
+						if match is None
+							Result.Trace(here, 'Failed to match against SAY command: invalid message format ${bytes}'
+						say = match.group(1)
+						person_name = match.group(2)
+						person_age = match.group(3)
+						Message.Whisper(say, Person(person_name, person_age))
+					end
+			end
+			processMessage(message)
+	else
+		Result.Trace(here, 'Failed to receive bytes from client')
+
+
+
+#           PATTERN MATCHING            #
+def processMessage(message: Message)
+    when message
+        Message.Say(msg) => print(msg)
+        Message.Whisper(person, msg) => print("{}: {}", person.name, msg)
+        Message.Leave => ...
+        Message.Join => ...

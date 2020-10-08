@@ -24,7 +24,7 @@ class ASMLoader(private val file: File){
             }
         }
 
-    private var bytes = byteArrayOf()
+    private var bytes = arrayOf<UByte>()
 
     /**
      * A hashmap of labels where the key is the label name and the value is the index in memory
@@ -48,18 +48,76 @@ class ASMLoader(private val file: File){
         TODO: Implement labels so that every time we process a label, we save it's place in the executable,
          so that we can use it again later
      */
-    private fun parseRef(tokens: TokenStream): Either<ByteArray, String>{
+    private fun parseRef(tokens: TokenStream): Either<UByteArray, String>{
         val next = when(val next = tokens.next()){
-            is None -> return "Expected an operand after MOV instruction but instead found EOF".right()
+            is None -> return "Expected an operand after REF instruction but instead found EOF".right()
             is Some -> next.t
         }
-        var bytes = byteArrayOf(InstructionSet.REF.code)
+        var bytes = ubyteArrayOf(InstructionSet.REF.code)
         when(next){
             is Token.ByteLiteralToken, is Token.ShortLiteralToken, is Token.IntegerLiteralToken, is Token.LongLiteralToken ->
                 bytes += when(val result = parseIntegerToBytes(next)){
                     is Either.Left -> result.a
                     is Either.Right -> return result
                 }
+            is Token.IdentifierToken -> when(next.lexeme.toUpperCase()){
+                "BYTE" -> {
+                    bytes += InstructionSet.BYTE.code
+                    bytes += when(val n = tokens.next()){
+                        is Some -> when(n.t){
+                            is Token.ByteLiteralToken, is Token.ShortLiteralToken, is Token.IntegerLiteralToken, is Token.LongLiteralToken ->
+                                when(val result = parseIntegerToBytes(n.t)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> return result
+                                }
+                            else -> return "Invalid opcode: ${n.t}".right()
+                        }
+                        is None -> return "Expected an operand after BYTE instruction but instead found EOF".right()
+                    }
+                }
+                "WORD" -> {
+                    bytes += InstructionSet.WORD.code
+                    bytes += when(val n = tokens.next()){
+                        is Some -> when(n.t){
+                            is Token.ByteLiteralToken, is Token.ShortLiteralToken, is Token.IntegerLiteralToken, is Token.LongLiteralToken ->
+                                when(val result = parseIntegerToBytes(n.t)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> return result
+                                }
+                            else -> return "Invalid opcode: ${n.t}".right()
+                        }
+                        is None -> return "Expected an operand after BYTE instruction but instead found EOF".right()
+                    }
+                }
+                "DWORD" -> {
+                    bytes += InstructionSet.DWORD.code
+                    bytes += when(val n = tokens.next()){
+                        is Some -> when(n.t){
+                            is Token.ByteLiteralToken, is Token.ShortLiteralToken, is Token.IntegerLiteralToken, is Token.LongLiteralToken ->
+                                when(val result = parseIntegerToBytes(n.t)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> return result
+                                }
+                            else -> return "Invalid opcode: ${n.t}".right()
+                        }
+                        is None -> return "Expected an operand after BYTE instruction but instead found EOF".right()
+                    }
+                }
+                "QWORD" -> {
+                    bytes += InstructionSet.QWORD.code
+                    bytes += when(val n = tokens.next()){
+                        is Some -> when(n.t){
+                            is Token.ByteLiteralToken, is Token.ShortLiteralToken, is Token.IntegerLiteralToken, is Token.LongLiteralToken ->
+                                when(val result = parseIntegerToBytes(n.t)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> return result
+                                }
+                            else -> return "Invalid opcode: ${n.t}".right()
+                        }
+                        is None -> return "Expected an operand after BYTE instruction but instead found EOF".right()
+                    }
+                }
+            }
             else -> return "Expected a memory address to reference, found $next".right()
         }
         when(val rbracket = tokens.next()){
@@ -72,61 +130,61 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
-    fun writeByte(tokens: TokenStream): Either<ByteArray, String>{
-        var bytes = byteArrayOf(InstructionSet.BYTE.code)
+    fun writeByte(tokens: TokenStream): Either<UByteArray, String>{
+        var bytes = ubyteArrayOf(InstructionSet.BYTE.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
         }
         when(next){
-            is Token.ByteLiteralToken -> bytes += next.literal.toByte() and 0xFF.toByte()
-            is Token.ShortLiteralToken -> bytes += next.literal.toByte()
-            is Token.IntegerLiteralToken -> bytes += next.literal.toByte()
-            is Token.LongLiteralToken -> bytes += next.literal.toByte()
+            is Token.ByteLiteralToken -> bytes += next.literal.toUByte() and 0xFF.toUByte()
+            is Token.ShortLiteralToken -> bytes += next.literal.toUByte()
+            is Token.IntegerLiteralToken -> bytes += next.literal.toUByte()
+            is Token.LongLiteralToken -> bytes += next.literal.toUByte()
             else -> return "Expected an integer literal but instead found $next".right()
         }
         return bytes.left()
     }
 
-    fun writeWord(tokens: TokenStream): Either<ByteArray, String>{
-        var bytes = byteArrayOf(InstructionSet.WORD.code)
+    fun writeWord(tokens: TokenStream): Either<UByteArray, String>{
+        var bytes = ubyteArrayOf(InstructionSet.WORD.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
         }
         when(next){
             is Token.ByteLiteralToken -> {
-                bytes += 0
-                bytes += next.literal.toByte() and 0xFF.toByte()
+                bytes += 0.toUByte()
+                bytes += next.literal.toUByte() and 0xFF.toUByte()
             }
             is Token.IntegerLiteralToken -> {
-                bytes += ((next.literal ushr 2) and 0xff00).toByte()
-                bytes += (next.literal and 0x00ff).toByte()
+                bytes += ((next.literal ushr 2) and 0xff00).toUByte()
+                bytes += (next.literal and 0x00ff).toUByte()
             }
             is Token.ShortLiteralToken -> {
-                bytes += ((next.literal.toInt() ushr 2) and 0xff).toByte()
-                bytes += (next.literal and 0xff).toByte()
+                bytes += ((next.literal.toInt() ushr 2) and 0xff).toUByte()
+                bytes += (next.literal and 0xff).toUByte()
             }
             is Token.LongLiteralToken -> {
-                bytes += ((next.literal.toInt() ushr 2) and 0xff).toByte()
-                bytes += (next.literal and 0xff).toByte()
+                bytes += ((next.literal.toInt() ushr 2) and 0xff).toUByte()
+                bytes += (next.literal and 0xff).toUByte()
             }
         }
         return bytes.left()
     }
 
-    fun writeDoubleWord(tokens: TokenStream): Either<ByteArray, String>{
-        var bytes = byteArrayOf(InstructionSet.WORD.code)
+    fun writeDoubleWord(tokens: TokenStream): Either<UByteArray, String>{
+        var bytes = ubyteArrayOf(InstructionSet.WORD.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
         }
         when(next){
             is Token.IntegerLiteralToken -> {
-                bytes += 0
-                bytes += ((next.literal and 0x00ff0000) shl 4).toByte()
-                bytes += ((next.literal and 0x0000ff00) shl 2).toByte()
-                bytes += (next.literal and 0x000000ff).toByte()
+                bytes += 0.toUByte()
+                bytes += ((next.literal and 0x00ff0000) shl 4).toUByte()
+                bytes += ((next.literal and 0x0000ff00) shl 2).toUByte()
+                bytes += (next.literal and 0x000000ff).toUByte()
             }
             else -> return "Expected an integer literal but instead found $next".right()
         }
@@ -138,8 +196,8 @@ class ASMLoader(private val file: File){
      *  The tokenizer currently does not recognize hexidecimal of any sort. The tokenizer needs to be able to recognize
      *  them in order for [writeQuadWord] and [writeDoubleWord] to work properly so for now these are WIP
      */
-    fun writeQuadWord(tokens: TokenStream): Either<ByteArray, String>{
-        var bytes = byteArrayOf(InstructionSet.WORD.code)
+    fun writeQuadWord(tokens: TokenStream): Either<UByteArray, String>{
+        var bytes = ubyteArrayOf(InstructionSet.WORD.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
@@ -148,26 +206,26 @@ class ASMLoader(private val file: File){
             is Token.IntegerLiteralToken -> {
                 when{
                     next.literal > 0xff -> {
-                        bytes += 0
-                        bytes += 0
-                        bytes += ((next.literal and 0xff00) shl 2).toByte()
-                        bytes += (next.literal and 0x00ff).toByte()
+                        bytes += 0.toUByte()
+                        bytes += 0.toUByte()
+                        bytes += ((next.literal and 0xff00) shl 2).toUByte()
+                        bytes += (next.literal and 0x00ff).toUByte()
                     }
                     next.literal > 0xffff -> {
-                        bytes += ((next.literal.toLong() and 0xff0000000000000) shl 16).toByte()
-                        bytes += ((next.literal.toLong() and 0x00ff000000) shl 12).toByte()
-                        bytes += ((next.literal and 0x0000ff00) shl 2).toByte()
-                        bytes += (next.literal and 0x000000ff).toByte()
-                        bytes += ((next.literal.toLong() and 0xff000000) shl 8).toByte()
-                        bytes += ((next.literal and 0x00ff0000) shl 4).toByte()
-                        bytes += ((next.literal and 0x0000ff00) shl 2).toByte()
-                        bytes += (next.literal and 0x000000ff).toByte()
+                        bytes += ((next.literal.toLong() and 0xff0000000000000) shl 16).toUByte()
+                        bytes += ((next.literal.toLong() and 0x00ff000000) shl 12).toUByte()
+                        bytes += ((next.literal and 0x0000ff00) shl 2).toUByte()
+                        bytes += (next.literal and 0x000000ff).toUByte()
+                        bytes += ((next.literal.toLong() and 0xff000000) shl 8).toUByte()
+                        bytes += ((next.literal and 0x00ff0000) shl 4).toUByte()
+                        bytes += ((next.literal and 0x0000ff00) shl 2).toUByte()
+                        bytes += (next.literal and 0x000000ff).toUByte()
                     }
                     else -> {
-                        bytes += 0
-                        bytes += 0
-                        bytes += 0
-                        bytes += next.literal.toByte()
+                        bytes += 0.toUByte()
+                        bytes += 0.toUByte()
+                        bytes += 0.toUByte()
+                        bytes += next.literal.toUByte()
                     }
                 }
             }
@@ -176,42 +234,42 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
-    private fun parseIntegerToBytes(token: Token): Either<ByteArray, String> {
-        var bytes = byteArrayOf()
+    private fun parseIntegerToBytes(token: Token): Either<UByteArray, String> {
+        var bytes = ubyteArrayOf()
         return when (token){
             is Token.IntegerLiteralToken -> {
                 bytes += InstructionSet.DWORD.code
-                val bs = ByteArray(4)
-                bs[3] = ((token.literal) and 0xFF).toByte()
-                bs[2] = ((token.literal ushr 8) and 0xFF).toByte()
-                bs[1] = ((token.literal ushr 16) and 0xFF).toByte()
-                bs[0] = ((token.literal ushr 24) and 0xFF).toByte()
+                val bs = UByteArray(4)
+                bs[3] = ((token.literal) and 0xFF).toUByte()
+                bs[2] = ((token.literal ushr 8) and 0xFF).toUByte()
+                bs[1] = ((token.literal ushr 16) and 0xFF).toUByte()
+                bs[0] = ((token.literal ushr 24) and 0xFF).toUByte()
                 bytes += bs
                 bytes.left()
             }
             is Token.ByteLiteralToken -> {
                 bytes += InstructionSet.BYTE.code
-                bytes += token.literal.toByte() and 0xFF.toByte()
+                bytes += token.literal.toUByte() and 0xFF.toUByte()
                 bytes.left()
             }
             is Token.ShortLiteralToken -> {
                 bytes += InstructionSet.WORD.code
-                val bs = ByteArray(2)
-                bs[1] = ((token.literal) and 0xFF).toByte()
-                bs[0] = ((token.literal.toInt() ushr 8) and 0xFF).toByte()
+                val bs = UByteArray(2)
+                bs[1] = ((token.literal) and 0xFF).toUByte()
+                bs[0] = ((token.literal.toInt() ushr 8) and 0xFF).toUByte()
                 bytes += bs
                 bytes.left()
             }
             is Token.LongLiteralToken -> {
                 bytes += InstructionSet.QWORD.code
-                val bs = ByteArray(8)
-                bs[6] = ((token.literal) and 0xFF).toByte()
-                bs[5] = ((token.literal ushr 8) and 0xFF).toByte()
-                bs[4] = ((token.literal ushr 16) and 0xFF).toByte()
-                bs[3] = ((token.literal ushr 24) and 0xFF).toByte()
-                bs[2] = ((token.literal ushr 32) and 0xFF).toByte()
-                bs[1] = ((token.literal ushr 48) and 0xFF).toByte()
-                bs[0] = ((token.literal ushr 56) and 0xFF).toByte()
+                val bs = UByteArray(8)
+                bs[6] = ((token.literal) and 0xFF).toUByte()
+                bs[5] = ((token.literal ushr 8) and 0xFF).toUByte()
+                bs[4] = ((token.literal ushr 16) and 0xFF).toUByte()
+                bs[3] = ((token.literal ushr 24) and 0xFF).toUByte()
+                bs[2] = ((token.literal ushr 32) and 0xFF).toUByte()
+                bs[1] = ((token.literal ushr 48) and 0xFF).toUByte()
+                bs[0] = ((token.literal ushr 56) and 0xFF).toUByte()
                 bytes += bs
                 bytes.left()
             }
@@ -219,14 +277,20 @@ class ASMLoader(private val file: File){
         }
     }
 
-    private fun parsePush(tokens: TokenStream): Either<ByteArray, String>{
+    private fun parsePush(tokens: TokenStream): Either<UByteArray, String>{
         val operand = when(val next = tokens.next()){
             is None -> return "Expected a left operand after PUSH instruction but instead found EOF".right()
             is Some -> next.t
         }
-        var bytes = byteArrayOf(InstructionSet.PUSH.code)
+        var bytes = ubyteArrayOf(InstructionSet.PUSH.code)
         when(operand){
-            is Token.IntegerLiteralToken -> bytes += operand.literal.toByte()
+            is Token.IntegerLiteralToken,
+            is Token.ByteLiteralToken,
+            is Token.LongLiteralToken,
+            is Token.ShortLiteralToken      -> bytes += when(val result = parseIntegerToBytes(operand)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
             is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
@@ -236,14 +300,14 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
-    private fun parseJump(tokens: TokenStream): Either<ByteArray, String>{
+    private fun parseJump(tokens: TokenStream): Either<UByteArray, String>{
         val operand = when(val next = tokens.next()){
             is None -> return "Expected a left operand after JMP instruction but instead found EOF".right()
             is Some -> next.t
         }
-        var bytes = byteArrayOf(InstructionSet.JMP.code)
+        var bytes = ubyteArrayOf(InstructionSet.JMP.code)
         when(operand){
-            is Token.IntegerLiteralToken -> bytes += operand.literal.toByte()
+            is Token.IntegerLiteralToken -> bytes += operand.literal.toUByte()
             is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
@@ -252,18 +316,18 @@ class ASMLoader(private val file: File){
                 if(operand.lexeme !in labels){
                     return "Label ${operand.lexeme} does not exists".right()
                 }
-                bytes += labels[operand.lexeme]!!.toByte()
+                bytes += labels[operand.lexeme]!!.toUByte()
             }
         }
         return bytes.left()
     }
 
-    fun parseBinaryOperator(opcode: InstructionSet, tokens: TokenStream): Either<ByteArray, String>{
+    fun parseBinaryOperator(opcode: InstructionSet, tokens: TokenStream): Either<UByteArray, String>{
         val leftOperand = when(val next = tokens.next()){
             is None -> return "Expected a left operand after $opcode instruction but instead found EOF".right()
             is Some -> next.t
         }
-        var bytes = byteArrayOf(opcode.code)
+        var bytes = ubyteArrayOf(opcode.code)
         when(leftOperand){
             is Token.IdentifierToken -> {
                 val lexeme = leftOperand.lexeme.toUpperCase()
@@ -291,7 +355,7 @@ class ASMLoader(private val file: File){
                                 if(leftOperand.lexeme !in labels){
                                     return "Label ${leftOperand.lexeme} does not exists".right()
                                 }
-                                bytes += labels[leftOperand.lexeme]!!.toByte()
+                                bytes += labels[leftOperand.lexeme]!!.toUByte()
                             }
                         }
                     }
@@ -301,8 +365,8 @@ class ASMLoader(private val file: File){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
-            is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toByte()
-            is Token.ByteLiteralToken -> bytes += leftOperand.literal.toByte() and 0xFF.toByte()
+            is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toUByte()
+            is Token.ByteLiteralToken -> bytes += leftOperand.literal.toUByte() and 0xFF.toUByte()
             else -> return "Expected either a memory address destination or REF".right()
         }
         when(val next = tokens.next()){
@@ -321,7 +385,7 @@ class ASMLoader(private val file: File){
             is Token.IdentifierToken -> {
                 val lexeme = rightOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme == "TOP" -> bytes += InstructionSet.TOP.code
                     lexeme.isSizeModifier -> {
                         when(lexeme){
                             "BYTE" -> bytes += when(val result = writeByte(tokens)){
@@ -346,7 +410,7 @@ class ASMLoader(private val file: File){
                         if(rightOperand.lexeme !in labels){
                             return "Label ${rightOperand.lexeme} does not exists".right()
                         }
-                        bytes += labels[rightOperand.lexeme]!!.toByte()
+                        bytes += labels[rightOperand.lexeme]!!.toUByte()
                     }
                 }
             }
@@ -365,12 +429,12 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
-    fun parseTrinaryOperator(opcode: InstructionSet, tokens: TokenStream): Either<ByteArray, String>{
+    fun parseTrinaryOperator(opcode: InstructionSet, tokens: TokenStream): Either<UByteArray, String>{
         val leftOperand = when(val next = tokens.next()){
             is None -> return "Expected a left operand after $opcode instruction but instead found EOF".right()
             is Some -> next.t
         }
-        var bytes = byteArrayOf(opcode.code)
+        var bytes = ubyteArrayOf(opcode.code)
         when(leftOperand){
             is Token.IdentifierToken -> {
                 val lexeme = leftOperand.lexeme.toUpperCase()
@@ -398,7 +462,7 @@ class ASMLoader(private val file: File){
                                 if(leftOperand.lexeme !in labels){
                                     return "Label ${leftOperand.lexeme} does not exists".right()
                                 }
-                                bytes += labels[leftOperand.lexeme]!!.toByte()
+                                bytes += labels[leftOperand.lexeme]!!.toUByte()
                             }
                         }
                     }
@@ -408,8 +472,8 @@ class ASMLoader(private val file: File){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
-            is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toByte()
-            is Token.ByteLiteralToken -> bytes += leftOperand.literal.toByte() and 0xFF.toByte()
+            is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toUByte()
+            is Token.ByteLiteralToken -> bytes += leftOperand.literal.toUByte() and 0xFF.toUByte()
             else -> return "Expected either a memory address destination or REF".right()
         }
         when(val next = tokens.next()){
@@ -451,7 +515,7 @@ class ASMLoader(private val file: File){
                                 if(middleOperand.lexeme !in labels){
                                     return "Label ${middleOperand.lexeme} does not exists".right()
                                 }
-                                bytes += labels[middleOperand.lexeme]!!.toByte()
+                                bytes += labels[middleOperand.lexeme]!!.toUByte()
                             }
                         }
                     }
@@ -510,7 +574,7 @@ class ASMLoader(private val file: File){
                         if(rightOperand.lexeme !in labels){
                             return "Label ${rightOperand.lexeme} does not exists".right()
                         }
-                        bytes += labels[rightOperand.lexeme]!!.toByte()
+                        bytes += labels[rightOperand.lexeme]!!.toUByte()
                     }
                 }
             }

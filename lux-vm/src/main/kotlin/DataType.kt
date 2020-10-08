@@ -4,7 +4,7 @@ import kotlin.experimental.or
 import kotlin.experimental.xor
 
 sealed class DataType{
-    data class Byte(val data: kotlin.Byte): DataType(){
+    data class Byte(val data: kotlin.UByte): DataType(){
         override fun and(other: DataType): Byte =
             when(other){
                 is Byte -> Byte(other.data and data)
@@ -32,74 +32,82 @@ sealed class DataType{
 
         override fun shl(other: DataType): Byte =
             when(other){
-                is Byte -> Byte((other.data.toInt() shl data.toInt()).toByte())
-                is Word -> Byte((other.data2.data.toInt() shl data.toInt()).toByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() shl data.toInt()).toByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() shl data.toInt()).toByte())
+                is Byte -> Byte((other.data.toInt() shl data.toInt()).toUByte())
+                is Word -> Byte((other.data2.data.toInt() shl data.toInt()).toUByte())
+                is DoubleWord -> Byte((other.data2.data2.data.toInt() shl data.toInt()).toUByte())
+                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() shl data.toInt()).toUByte())
             }
 
         override fun shr(other: DataType): Byte =
             when(other){
-                is Byte -> Byte((data.toInt() shr other.data.toInt()).toByte())
-                is Word -> Byte((data.toInt() shr other.data2.data.toInt()).toByte())
-                is DoubleWord -> Byte((data.toInt() shr other.data2.data2.data.toInt()).toByte())
-                is QuadWord -> Byte((data.toInt() shr other.data2.data2.data2.data.toInt()).toByte())
+                is Byte -> Byte((data.toInt() shr other.data.toInt()).toUByte())
+                is Word -> Byte((data.toInt() shr other.data2.data.toInt()).toUByte())
+                is DoubleWord -> Byte((data.toInt() shr other.data2.data2.data.toInt()).toUByte())
+                is QuadWord -> Byte((data.toInt() shr other.data2.data2.data2.data.toInt()).toUByte())
             }
 
         override fun plus(other: DataType): Byte =
             when(other){
-                is Byte -> Byte((other.data.toInt() + data.toInt()).toByte())
-                is Word -> Byte((other.data2.data.toInt() + data.toInt()).toByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() + data.toInt()).toByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() + data.toInt()).toByte())
+                is Byte -> {
+                    Byte(((other.data + data) and 0xFF.toUInt()).toUByte())
+                }
+                is Word -> Byte((other.data2.data.toInt() + data.toInt()).toUByte())
+                is DoubleWord -> Byte((other.data2.data2.data.toInt() + data.toInt()).toUByte())
+                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() + data.toInt()).toUByte())
             }
 
+        @ExperimentalUnsignedTypes
         override fun minus(other: DataType): Byte =
             when(other){
-                is Byte -> Byte((other.data.toInt() - data.toInt()).toByte())
-                is Word -> Byte((other.data2.data.toInt() - data.toInt()).toByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() - data.toInt()).toByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() - data.toInt()).toByte())
+                is Byte -> {
+                    val unconvertedDiff = data - other.data
+                    val maskedDiff = unconvertedDiff and 0xFF.toUInt()
+                    val diff = maskedDiff.toUByte()
+                    Byte(diff)
+                }
+                is Word -> Byte((other.data2.data.toInt() - data.toInt()).toUByte())
+                is DoubleWord -> Byte((other.data2.data2.data.toInt() - data.toInt()).toUByte())
+                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() - data.toInt()).toUByte())
             }
 
         override fun times(other: DataType): Byte =
             when(other){
-                is Byte -> Byte((other.data.toInt() * data.toInt()).toByte())
-                is Word -> Byte((other.data2.data.toInt() * data.toInt()).toByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() * data.toInt()).toByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() * data.toInt()).toByte())
+                is Byte -> Byte((other.data.toInt() * data.toInt()).toUByte())
+                is Word -> Byte((other.data2.data.toInt() * data.toInt()).toUByte())
+                is DoubleWord -> Byte((other.data2.data2.data.toInt() * data.toInt()).toUByte())
+                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() * data.toInt()).toUByte())
             }
 
         override fun div(other: DataType): Byte =
             when(other){
-                is Byte -> Byte((other.data.toInt() / data.toInt()).toByte())
-                is Word -> Byte((other.data2.data.toInt() / data.toInt()).toByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() / data.toInt()).toByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() / data.toInt()).toByte())
+                is Byte -> Byte((other.data.toInt() / data.toInt()).toUByte())
+                is Word -> Byte((other.data2.data.toInt() / data.toInt()).toUByte())
+                is DoubleWord -> Byte((other.data2.data2.data.toInt() / data.toInt()).toUByte())
+                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() / data.toInt()).toUByte())
             }
 
         override fun toByte(): Byte = this
-        override fun toWord(): Word = Word(Byte(0), this)
-        override fun toDouble(): DoubleWord = DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), this))
-        override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), Byte(0))), DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), this)))
+        override fun toWord(): Word = Word(Byte(0.toUByte()), this)
+        override fun toDouble(): DoubleWord = DoubleWord(Word(Byte(0.toUByte()), Byte(0.toUByte())), Word(Byte(0.toUByte()), this))
+        override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0.toUByte()), Byte(0.toUByte())), Word(Byte(0.toUByte()), Byte(0.toUByte()))), DoubleWord(Word(Byte(0.toUByte()), Byte(0.toUByte())), Word(Byte(0.toUByte()), this)))
         override fun compareTo(other: DataType): Int {
             return when(other){
-                is Byte -> this.data - other.data
-                is Word -> (this.data - other.data2.data) + (this.data - other.data1.data)
+                is Byte -> (this.data - other.data).toInt()
+                is Word -> ((this.data - other.data2.data) + (this.data - other.data1.data)).toInt()
                 is DoubleWord ->
-                    (this.data - other.data2.data2.data) +
+                    ((this.data - other.data2.data2.data) +
                             (this.data - other.data2.data1.data) +
                             (this.data - other.data1.data1.data) +
-                            (this.data - other.data2.data2.data)
+                            (this.data - other.data2.data2.data)).toInt()
                 is QuadWord ->
-                    (this.data - other.data2.data2.data2.data) +
+                    ((this.data - other.data2.data2.data2.data) +
                             (this.data - other.data2.data2.data1.data) +
                             (this.data - other.data2.data1.data2.data) +
                             (this.data - other.data2.data1.data1.data) +
                             (this.data - other.data1.data1.data1.data) +
                             (this.data - other.data1.data2.data1.data) +
                             (this.data - other.data1.data1.data2.data) +
-                            (this.data - other.data1.data2.data2.data)
+                            (this.data - other.data1.data2.data2.data)).toInt()
             }
         }
     }
@@ -191,33 +199,33 @@ sealed class DataType{
 
         override fun toByte(): Byte = data2
         override fun toWord(): Word = this
-        override fun toDouble(): DoubleWord = DoubleWord(Word(Byte(0), Byte(0)), this)
-        override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), Byte(0))), DoubleWord(Word(Byte(0), Byte(0)), this))
+        override fun toDouble(): DoubleWord = DoubleWord(Word(Byte(0.toUByte()), Byte(0.toUByte())), this)
+        override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0.toUByte()), Byte(0.toUByte())), Word(Byte(0.toUByte()), Byte(0.toUByte()))), DoubleWord(Word(Byte(0.toUByte()), Byte(0.toUByte())), this))
         override fun compareTo(other: DataType): Int {
             return when(other){
-                is Byte -> this.data2.data - other.data
-                is Word -> (this.data2.data - other.data2.data) + (this.data1.data - other.data1.data)
+                is Byte -> (this.data2.data - other.data).toInt()
+                is Word -> ((this.data2.data - other.data2.data) + (this.data1.data - other.data1.data)).toInt()
                 is DoubleWord ->
-                    (this.data2.data - other.data2.data2.data) +
+                    ((this.data2.data - other.data2.data2.data) +
                             (this.data2.data - other.data2.data1.data) +
                             (this.data2.data - other.data1.data1.data) +
-                            (this.data2.data - other.data2.data2.data)
+                            (this.data2.data - other.data2.data2.data)).toInt()
                 is QuadWord ->
-                    (this.data2.data - other.data2.data2.data2.data) +
+                    ((this.data2.data - other.data2.data2.data2.data) +
                             (this.data2.data - other.data2.data2.data1.data) +
                             (this.data2.data - other.data2.data1.data2.data) +
                             (this.data2.data - other.data2.data1.data1.data) +
                             (this.data1.data - other.data1.data1.data1.data) +
                             (this.data1.data - other.data1.data2.data1.data) +
                             (this.data1.data - other.data1.data1.data2.data) +
-                            (this.data1.data - other.data1.data2.data2.data)
+                            (this.data1.data - other.data1.data2.data2.data)).toInt()
             }
         }
     }
     data class DoubleWord(val data1: Word, val data2: Word): DataType(){
         override fun and(other: DataType): DoubleWord =
             when(other){
-                is Byte -> DoubleWord(data1, (Word(Byte(0xff.toByte()), Byte(0xff.toByte())) or other) and data2.data2)
+                is Byte -> DoubleWord(data1, (Word(Byte(0xff.toUByte()), Byte(0xff.toUByte())) or other) and data2.data2)
                 is Word -> DoubleWord(data1, data2 and other)
                 is DoubleWord -> DoubleWord(other.data1 and data1, other.data2 and data2)
                 is QuadWord -> DoubleWord(other.data2.data1 and data1, other.data2.data2 and data2)
@@ -303,25 +311,25 @@ sealed class DataType{
         override fun toByte(): Byte = data2.data2
         override fun toWord(): Word = data2
         override fun toDouble(): DoubleWord = this
-        override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0), Byte(0)), Word(Byte(0), Byte(0))), this)
+        override fun toQuad(): QuadWord = QuadWord(DoubleWord(Word(Byte(0.toUByte()), Byte(0.toUByte())), Word(Byte(0.toUByte()), Byte(0.toUByte()))), this)
         override fun compareTo(other: DataType): Int {
             return when(other){
-                is Byte -> this.data2.data2.data - other.data
-                is Word -> (this.data2.data2.data - other.data2.data) + (this.data2.data2.data - other.data1.data)
+                is Byte -> (this.data2.data2.data - other.data).toInt()
+                is Word -> ((this.data2.data2.data - other.data2.data) + (this.data2.data2.data - other.data1.data)).toInt()
                 is DoubleWord ->
-                    (this.data2.data2.data - other.data2.data2.data) +
+                    ((this.data2.data2.data - other.data2.data2.data) +
                             (this.data2.data2.data - other.data2.data1.data) +
                             (this.data2.data1.data - other.data1.data1.data) +
-                            (this.data2.data1.data - other.data2.data2.data)
+                            (this.data2.data1.data - other.data2.data2.data)).toInt()
                 is QuadWord ->
-                    (this.data2.data2.data - other.data2.data2.data2.data) +
+                    ((this.data2.data2.data - other.data2.data2.data2.data) +
                             (this.data2.data2.data - other.data2.data2.data1.data) +
                             (this.data2.data1.data - other.data2.data1.data2.data) +
                             (this.data2.data1.data - other.data2.data1.data1.data) +
                             (this.data1.data1.data - other.data1.data1.data1.data) +
                             (this.data1.data2.data - other.data1.data2.data1.data) +
                             (this.data1.data1.data - other.data1.data1.data2.data) +
-                            (this.data1.data2.data - other.data1.data2.data2.data)
+                            (this.data1.data2.data - other.data1.data2.data2.data)).toInt()
             }
         }
 
@@ -332,12 +340,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                         DoubleWord(
                             Word(
-                                Byte(0xff.toByte()),
-                                Byte(0xff.toByte())
+                                Byte(0xff.toUByte()),
+                                Byte(0xff.toUByte())
                             ),
                             Word(
-                                    Byte(0xff.toByte()),
-                                    Byte(0xff.toByte())
+                                    Byte(0xff.toUByte()),
+                                    Byte(0xff.toUByte())
                                 ) or other
                         ) and data2.data2)
                 is Word -> QuadWord(data1, data2 and other)
@@ -349,12 +357,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                     DoubleWord(
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ),
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ) or other
                     ) or data2.data2)
                 is Word -> QuadWord(data1, data2 or other)
@@ -366,12 +374,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                     DoubleWord(
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ),
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ) or other
                     ) xor data2.data2)
                 is Word -> QuadWord(data1, data2 xor other)
@@ -387,12 +395,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                     DoubleWord(
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ),
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ) or other
                     ) shl data2.data2)
                 is Word -> QuadWord(data1, data2 shl other)
@@ -405,12 +413,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                     DoubleWord(
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ),
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ) or other
                     ) shr data2.data2)
                 is Word -> QuadWord(data1, data2 shr other)
@@ -423,12 +431,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                     DoubleWord(
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ),
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ) or other
                     ) + data2.data2)
                 is Word -> QuadWord(data1, data2 + other)
@@ -441,12 +449,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                     DoubleWord(
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ),
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ) or other
                     ) - data2.data2)
                 is Word -> QuadWord(data1, data2 - other)
@@ -459,12 +467,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                     DoubleWord(
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ),
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ) or other
                     ) * data2.data2)
                 is Word -> QuadWord(data1, data2 * other)
@@ -477,12 +485,12 @@ sealed class DataType{
                 is Byte -> QuadWord(data1,
                     DoubleWord(
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ),
                         Word(
-                            Byte(0xff.toByte()),
-                            Byte(0xff.toByte())
+                            Byte(0xff.toUByte()),
+                            Byte(0xff.toUByte())
                         ) or other
                     ) / data2.data2)
                 is Word -> QuadWord(data1, data2 / other)
@@ -496,22 +504,22 @@ sealed class DataType{
         override fun toQuad(): QuadWord = this
         override fun compareTo(other: DataType): Int {
             return when(other){
-                is Byte -> this.data2.data2.data2.data - other.data
-                is Word -> (this.data2.data2.data2.data - other.data2.data) + (this.data2.data2.data1.data - other.data1.data)
+                is Byte -> (this.data2.data2.data2.data - other.data).toInt()
+                is Word -> ((this.data2.data2.data2.data - other.data2.data) + (this.data2.data2.data1.data - other.data1.data)).toInt()
                 is DoubleWord ->
-                    (this.data2.data2.data2.data - other.data2.data2.data) +
+                    ((this.data2.data2.data2.data - other.data2.data2.data) +
                     (this.data2.data2.data1.data - other.data2.data1.data) +
                     (this.data2.data1.data1.data - other.data1.data1.data) +
-                    (this.data2.data1.data2.data - other.data2.data2.data)
+                    (this.data2.data1.data2.data - other.data2.data2.data)).toInt()
                 is QuadWord ->
-                    (this.data2.data2.data2.data - other.data2.data2.data2.data) +
+                    ((this.data2.data2.data2.data - other.data2.data2.data2.data) +
                             (this.data2.data2.data1.data - other.data2.data2.data1.data) +
                             (this.data2.data1.data2.data - other.data2.data1.data2.data) +
                             (this.data2.data1.data1.data - other.data2.data1.data1.data) +
                             (this.data1.data1.data1.data - other.data1.data1.data1.data) +
                             (this.data1.data2.data1.data - other.data1.data2.data1.data) +
                             (this.data1.data1.data2.data - other.data1.data1.data2.data) +
-                            (this.data1.data2.data2.data - other.data1.data2.data2.data)
+                            (this.data1.data2.data2.data - other.data1.data2.data2.data)).toInt()
             }
         }
 

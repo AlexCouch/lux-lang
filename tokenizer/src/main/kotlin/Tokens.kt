@@ -6,11 +6,25 @@ sealed class Token(open val startPos: TokenPos, open val endPos: TokenPos){
                 append(lexeme)
             }
     }
+    data class DotToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append('.')
+            }
+    }
     data class EqualToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
         @ExperimentalStdlibApi
         override fun toString(): String =
             buildPrettyString {
                 append('=')
+            }
+    }
+    data class SemicolonToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append(';')
             }
     }
     data class PlusToken(override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){

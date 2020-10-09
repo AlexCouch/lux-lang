@@ -20,6 +20,9 @@ class Lexer(val input: String){
         '}' -> Some(Token.RCurlyToken(currentPos, currentPos))
         '>' -> Some(Token.RAngleToken(currentPos, currentPos))
         '<' -> Some(Token.LAngleToken(currentPos, currentPos))
+        ';' -> Some(Token.SemicolonToken(currentPos, currentPos))
+        '\'' -> Some(Token.ApostToken(currentPos, currentPos))
+        '.' -> Some(Token.DotToken(currentPos, currentPos))
         else -> None
     }
 
@@ -167,22 +170,6 @@ class Lexer(val input: String){
                                 }
                             }
                             advance()
-                            tokens + Token.StringLiteralToken(buf, startPos, currentPos)
-                        }
-                        t == '\'' -> {
-                            val startPos = currentPos
-                            val buf = buildString {
-                                scan@ while(true){
-                                    val next = advance()
-                                    if(next.isEmpty()) break@scan
-                                    if(next is Some){
-                                        when (next.t) {
-                                            '\'' -> break@scan
-                                            else -> append(next.t)
-                                        }
-                                    }
-                                }
-                            }
                             tokens + Token.StringLiteralToken(buf, startPos, currentPos)
                         }
                         t.delimitingToken != None -> {

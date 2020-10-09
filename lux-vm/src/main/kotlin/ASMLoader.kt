@@ -1,4 +1,5 @@
 import arrow.core.*
+import arrow.core.extensions.option.foldable.fold
 import java.io.File
 import kotlin.experimental.and
 
@@ -631,6 +632,13 @@ class ASMLoader(private val file: File){
         while(tokens.hasNext()){
             when(val next = tokens.next()){
                 is Some -> when(next.t){
+                    is Token.SemicolonToken -> {
+                        //Here we just create a list of tokens to be discarded at the end of the current scope
+                        val ignoredTokens = arrayListOf<Token>()
+                        while(tokens.peek.exists { it.startPos.pos.line == next.t.startPos.pos.line }){
+                            ignoredTokens += (tokens.next() as Some<Token>).t
+                        }
+                    }
                     is Token.IdentifierToken -> {
                         val ident = next.t as Token.IdentifierToken
                         when(ident.lexeme.toUpperCase()){

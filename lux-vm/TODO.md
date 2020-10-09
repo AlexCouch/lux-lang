@@ -26,7 +26,7 @@
       
         jump some_label
       ```
-* [ ] Implement comments
+* [x] Implement comments
     - ```
         mov 0x10, [0x5] ;Move whatever is in the address stored in 0x5 to 0x10
       ```

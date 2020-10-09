@@ -75,7 +75,7 @@
             my_str: .ascii 'Hello, world!'
       ```
     
-## Version 0.0.4-prototype (Linker)
+## Version 0.0.4-prototype (Linker, Debugger)
 * [ ] Add a directive for including another lasm file
     - `.include [string]`
 * [ ] Add a new output type of *lib*, with extension *.llib
@@ -91,6 +91,15 @@
         @linux
             .load 'some_lib_linux.so'
       ```
+* [ ] Add a way to enable different contexts for the VM to run in, one for normal mode, and one for debug mode
+* [ ] Add an interactive debugger with an environment with commands to
+    - [ ] Add breakpoints
+    - [ ] Show memory address data or ranges of address data
+    - [ ] Show stack
+    - [ ] Show current/next instruction
+        - [ ] This should be customizable so that you can set any range of instructions
+        - [ ] This should have color coding depending on the syntax
+* [ ] Cache the comments so that they can be reviewed in the debugger
 
 ## Version 0.0.5-prototype (FFI)
 * [ ] Implement directive for loading up a native library (.so, .a, .dll, .dyn) to be used as FFI

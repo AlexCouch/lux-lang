@@ -2,7 +2,7 @@ push 0x06                                   ;Push 0x06 which is our n to be fact
 
 movd	0x05, top                           ;Move what's on the top of the stack to 0x05. This is where we will do the countdown from n
 movd	0x0a, 0x01                          ;Push 0x01 into 0x01. This is where we will calculate the factorial total
-fibLoop:                                    ;Start of the factorial loop
+factLoop:                                   ;Start of the factorial loop
 	mul 	0x0a, [dword 0x05]              ;Multiply what's in 0x05 of size dword with what's in 0x0a
 	sub		0x05, dword 0x01                ;Subtract 1 from what's in 0x05
-	jge		[dword 0x05], 0x01, fibLoop     ;Check if what's in 0x05 (size dword) is greater than 1, if so, jump back to fibLoop label
+	jge		[dword 0x05], 0x01, factLoop    ;Check if what's in 0x05 (size dword) is greater than 1, if so, jump back to fibLoop label

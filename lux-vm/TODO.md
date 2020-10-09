@@ -16,7 +16,7 @@
     - [x] JEQ  ;Jump if equal to
 * [x] Rewrite parser so that it is more robust and easier to implement new things.
     - Make the parser simpler with a higher-order function for parsing certain kinds of instructions
-* [ ] Finish implementing double word and quad word operations
+* [x] Finish implementing double word and quad word operations
     - movd, movq
 * [x] Implement labels
     - ```
@@ -34,18 +34,19 @@
     - Make sure that the bitwise operations between different sized data makes sense and works as it should
     
 * [ ] Change the data to be unsigned bytes, and implement signed version of instructions:
-    - movsb : move signed bytes
-    - movsw : move signed word
-    - movsd : move signed double word
-    - movsq : mov signed quad word
-    - addsb : add signed byte (right) to given address (left)
-    - subsb : sub signed byte (right) to given address (left)
-    - mulsb : multiply signed byte (right) to given address (left)
-    - divsb : divide signed byte (right) to given address (left)
+    - [x] Change default instructions to operate on unsigned bytes
+    - [ ] movsb : move signed bytes
+    - [ ] movsw : move signed word
+    - [ ] movsd : move signed double word
+    - [ ] movsq : mov signed quad word
+    - [ ] addsb : add signed byte (right) to given address (left)
+    - [ ] subsb : sub signed byte (right) to given address (left)
+    - [ ] mulsb : multiply signed byte (right) to given address (left)
+    - [ ] divsb : divide signed byte (right) to given address (left)
     
     - This will ensure that any time that signed data is never specified, then we will always have the unsigned data available for use for unsigned operations
 
-* [ ] Add overflow logic to data arithmetics so that if a byte overflows then we reset that byte and flow into the next byte (words, dwords, qwords)
+* [x] Add overflow logic to data arithmetics so that if a byte overflows then we reset that byte and flow into the next byte (words, dwords, qwords)
 
 ## Version 0.0.3-prototype (FFI)
 * [ ] Implement sections

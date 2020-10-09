@@ -1,4 +1,4 @@
-push 0x06
+push 0x04
 
 fibStart:
 	movd	0x05, top

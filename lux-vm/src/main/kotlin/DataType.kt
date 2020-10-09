@@ -1,3 +1,7 @@
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
+
 @ExperimentalUnsignedTypes
 sealed class DataType{
     @ExperimentalUnsignedTypes
@@ -43,44 +47,77 @@ sealed class DataType{
                 is QuadWord -> Byte((data.toInt() shr other.data2.data2.data2.data.toInt()).toUByte())
             }
 
-        override fun plus(other: DataType): Byte =
+        private fun toUByte() =
+            this.data
+
+        override fun plus(other: DataType): Either<Byte, String> =
             when(other){
                 is Byte -> {
-                    Byte(((other.data + data) and 0xFF.toUInt()).toUByte())
+                    val ubyte = other.toUByte()
+                    if(data + ubyte > 0xFFu){
+                        "Cannot add $other as sum is greater than max byte size".right()
+                    }else{
+                        Byte((data + ubyte).toUByte()).left()
+                    }
                 }
-                is Word -> Byte((other.data2.data.toInt() + data.toInt()).toUByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() + data.toInt()).toUByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() + data.toInt()).toUByte())
+                is Word -> {
+                    "Cannot add word to byte as word is too large to add to a byte. Try adding byte to word instead.".right()
+                }
+                is DoubleWord -> {
+                    "Cannot add dword to byte as word is too large to add to a byte. Try adding byte to word instead.".right()
+                }
+                is QuadWord -> "Cannot add qword to byte as word is too large to add to a byte. Try adding byte to word instead.".right()
             }
 
-        @ExperimentalUnsignedTypes
-        override fun minus(other: DataType): Byte =
+        override fun minus(other: DataType): Either<Byte, String> =
             when(other){
                 is Byte -> {
                     val unconvertedDiff = data - other.data
                     val maskedDiff = unconvertedDiff and 0xFF.toUInt()
                     val diff = maskedDiff.toUByte()
-                    Byte(diff)
+                    Byte(diff).left()
                 }
-                is Word -> Byte((data - other.data2.data).toUByte())
-                is DoubleWord -> Byte((data - other.data2.data2.data).toUByte())
-                is QuadWord -> Byte((data - other.data2.data2.data2.data).toUByte())
+                is Word -> {
+                    "Cannot subtract word to byte as word is too large to add to a byte. Try subtracting byte from word instead.".right()
+                }
+                is DoubleWord -> {
+                    "Cannot subtract dword to byte as dword is too large to add to a byte. Try subtracting byte from dword instead.".right()
+                }
+                is QuadWord -> "Cannot subtract qword to byte as qword is too large to add to a byte. Try subtract byte from qword instead.".right()
             }
 
-        override fun times(other: DataType): Byte =
+        override fun times(other: DataType): Either<Byte, String> =
             when(other){
-                is Byte -> Byte((other.data.toInt() * data.toInt()).toUByte())
-                is Word -> Byte((other.data2.data.toInt() * data.toInt()).toUByte())
-                is DoubleWord -> Byte((other.data2.data2.data.toInt() * data.toInt()).toUByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() * data.toInt()).toUByte())
+                is Byte -> {
+                    val product = other.data * data
+                    if(product > 0xFFu){
+                        "Cannot multiply $this by $other because it's product is greater than 0xFF".right()
+                    }else{
+                        Byte(product.toUByte()).left()
+                    }
+                }
+                is Word -> {
+                    "Cannot multiply byte by word as word is too large to multiply a byte.".right()
+                }
+                is DoubleWord -> {
+                    "Cannot multiply byte by dword as dword is too large to add to a byte.".right()
+                }
+                is QuadWord -> "Cannot multiply byte by qword as qword is too large to add to a byte.".right()
             }
 
-        override fun div(other: DataType): Byte =
+        override fun div(other: DataType): Either<Byte, String> =
             when(other){
-                is Byte -> Byte((data / other.data ).toUByte())
-                is Word -> Byte((data / other.data2.data).toUByte())
-                is DoubleWord -> Byte((data / other.data2.data2.data).toUByte())
-                is QuadWord -> Byte((other.data2.data2.data2.data.toInt() / data.toInt()).toUByte())
+                is Byte -> {
+                    val quotient = (data / other.data )
+                    Byte(quotient.toUByte()).left()
+                }
+                is Word -> {
+                    "Cannot divide byte by word as word is too large to divide a byte.".right()
+                }
+                is DoubleWord -> {
+                    "Cannot divide byte by dword as dword is too large to divide a byte.".right()
+                }
+                is QuadWord -> "Cannot divide byte by qword as qword is too large to divide a byte.".right()
             }
 
         override fun toByte(): Byte = this
@@ -107,6 +144,13 @@ sealed class DataType{
                             (this.data - other.data1.data2.data2.data)).toInt()
             }
         }
+
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append("0x")
+                append(data.toString(16))
+            }
     }
     @ExperimentalUnsignedTypes
     data class Word(val data1: Byte, val data2: Byte): DataType(){
@@ -163,37 +207,134 @@ sealed class DataType{
                 )
             }
 
-        override fun plus(other: DataType): Word =
-            when(other){
-                is Byte -> Word(data1, (other + data2))
-                is Word -> Word((other.data1 + data1), other.data2 + data2)
-                is DoubleWord -> Word((other.data2.data1 + data1), (other.data2.data2 + data2))
-                is QuadWord -> Word((other.data2.data2.data1 + data1), (other.data2.data2.data2 + data2))
-            }
+        override fun plus(other: DataType): Either<Word, String> {
+            val int = (data1.data.toUInt() shl 8) or data2.data.toUInt()
+            return when (other) {
+                is Byte -> {
+                    val sum = int + other.data
+                    if (sum > 0xFFFFu) {
+                        "Cannot add $other to $this as the sum is greater than size word.".right()
+                    } else {
+                        val higher = (sum shr 8) and 0xFFu
+                        val lower = sum and 0xFFu
+                        Word(Byte(higher.toUByte()), Byte(lower.toUByte())).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = int + otherInt
+                    if (sum > 0xFFFFu) {
+                        "Cannot add $other to $this as the sum is greater than size word.".right()
+                    } else {
+                        val higher = (sum shr 8) and 0xFFu
+                        val lower = sum and 0xFFu
+                        Word(Byte(higher.toUByte()), Byte(lower.toUByte())).left()
+                    }
+                }
+                is DoubleWord -> {
+                    "Cannot add word to dword as dword is too large to add a word.".right()
+                }
+                is QuadWord ->
+                    "Cannot add word to qword as qword is too large to add a word.".right()
 
-        override fun minus(other: DataType): Word =
-            when(other){
-                is Byte -> Word(data1, (data2 - other))
-                is Word -> Word((data1 - other.data1), data2 - other.data2)
-                is DoubleWord -> Word((data1 - other.data2.data1), (data2 - other.data2.data2))
-                is QuadWord -> Word((data1 - other.data2.data2.data1), (data2 - other.data2.data2.data2))
             }
+        }
 
-        override fun times(other: DataType): Word =
-            when(other){
-                is Byte -> Word(data1, (other * data2))
-                is Word -> Word((other.data1 * data1), other.data2 * data2)
-                is DoubleWord -> Word((other.data2.data1 * data1), (other.data2.data2 * data2))
-                is QuadWord -> Word((other.data2.data2.data1 * data1), (other.data2.data2.data2 * data2))
+        override fun minus(other: DataType): Either<Word, String> {
+            val int = (data1.data.toUInt() shl 8) or data2.data.toUInt()
+            return when (other) {
+                is Byte -> {
+                    val diff = int - other.data
+                    if (diff > 0xFFFFu) {
+                        "Cannot subtract $other from $this as the diff is greater than size word.".right()
+                    } else {
+                        val higher = (diff shr 8) and 0xFFu
+                        val lower = diff and 0xFFu
+                        Word(Byte(higher.toUByte()), Byte(lower.toUByte())).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = (other.data1.data.toUInt() shl 8) or other.data2.data.toUInt()
+                    val diff = int - otherInt
+                    if (diff > 0xFFFFu) {
+                        "Cannot subtract $other from $this as the diff is greater than size word.".right()
+                    } else {
+                        val higher = (diff shr 8) and 0xFFu
+                        val lower = diff and 0xFFu
+                        Word(Byte(higher.toUByte()), Byte(lower.toUByte())).left()
+                    }
+                }
+                is DoubleWord -> {
+                    "Cannot subtract word from dword as dword is too large to add a word.".right()
+                }
+                is QuadWord ->
+                    "Cannot subtract word from qword as qword is too large to add a word.".right()
             }
+        }
 
-        override fun div(other: DataType): Word =
-            when(other){
-                is Byte -> Word(data1, (data2 / other))
-                is Word -> Word((data1 / other.data1), data2 / other.data2)
-                is DoubleWord -> Word((other.data2.data1 / data1), (data2 / other.data2.data2))
-                is QuadWord -> Word((data1 / other.data2.data2.data1), (data2 / other.data2.data2.data2))
+        override fun times(other: DataType): Either<Word, String> {
+            val int = (data1.data.toUInt() shl 8) or data2.data.toUInt()
+            return when (other) {
+                is Byte -> {
+                    val diff = int * other.data
+                    if (diff > 0xFFFFu) {
+                        "Cannot subtract $other from $this as the diff is greater than size word.".right()
+                    } else {
+                        val higher = (diff shr 8) and 0xFFu
+                        val lower = diff and 0xFFu
+                        Word(Byte(higher.toUByte()), Byte(lower.toUByte())).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = (other.data1.data.toUInt() shl 8) or other.data2.data.toUInt()
+                    val diff = int * otherInt
+                    if (diff > 0xFFFFu) {
+                        "Cannot subtract $other from $this as the diff is greater than size word.".right()
+                    } else {
+                        val higher = (diff shr 8) and 0xFFu
+                        val lower = diff and 0xFFu
+                        Word(Byte(higher.toUByte()), Byte(lower.toUByte())).left()
+                    }
+                }
+                is DoubleWord -> {
+                    "Cannot multiply word by dword as dword is too large to multiply a word.".right()
+                }
+                is QuadWord ->
+                    "Cannot divide qword from word as qword is too large to divide a word by.".right()
             }
+        }
+
+        override fun div(other: DataType): Either<Word, String> {
+            val int = (data1.data.toUInt() shl 8) or data2.data.toUInt()
+            return when (other) {
+                is Byte -> {
+                    val diff = int * other.data
+                    if (diff > 0xFFFFu) {
+                        "Cannot subtract $other from $this as the diff is greater than size word.".right()
+                    } else {
+                        val higher = (diff shr 8) and 0xFFu
+                        val lower = diff and 0xFFu
+                        Word(Byte(higher.toUByte()), Byte(lower.toUByte())).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val diff = int * otherInt
+                    if (diff > 0xFFFFu) {
+                        "Cannot subtract $other from $this as the diff is greater than size word.".right()
+                    } else {
+                        val higher = (diff shr 8) and 0xFFu
+                        val lower = diff and 0xFFu
+                        Word(Byte(higher.toUByte()), Byte(lower.toUByte())).left()
+                    }
+                }
+                is DoubleWord -> {
+                    "Cannot divide word by dword as dword is too large to divide a word.".right()
+                }
+                is QuadWord ->
+                    "Cannot divide word by qword as qword is too large to divide a word by.".right()
+            }
+        }
 
         override fun toByte(): Byte = data2
         override fun toWord(): Word = this
@@ -219,6 +360,14 @@ sealed class DataType{
                             (this.data1.data - other.data1.data2.data2.data)).toInt()
             }
         }
+
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append("0x")
+                val num = (data1.data.toUInt() shl 8) or data2.data.toUInt()
+                append((num and 0xFFFFu).toString(16))
+            }
     }
     @ExperimentalUnsignedTypes
     data class DoubleWord(val data1: Word, val data2: Word): DataType(){
@@ -275,37 +424,322 @@ sealed class DataType{
                 )
             }
 
-        override fun plus(other: DataType): DoubleWord =
-            when(other){
-                is Byte -> DoubleWord(data1, data2 + other)
-                is Word -> DoubleWord(data1, other + data2)
-                is DoubleWord -> DoubleWord((other.data1 + data1), (other.data2 + data2))
-                is QuadWord -> DoubleWord((other.data2.data1 + data1), (other.data2.data2 + data2))
+        override fun plus(other: DataType): Either<DoubleWord, String> {
+            val int = (data1.data1.data.toUInt() shl 24) or
+                    (data1.data2.data.toUInt() shl 16) or
+                    (data2.data1.data.toUInt() shl 8) or
+                    data2.data2.data.toUInt()
+            return when (other) {
+                is Byte -> {
+                    val sum = int + other.data
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot add $other to $this as the sum is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = int + otherInt
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot add $other from $this as the sum is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is DoubleWord -> {
+                    val otherInt = (other.data1.data1.data.toUInt() shl 24) or
+                            (other.data1.data2.data.toUInt() shl 16) or
+                            (other.data2.data1.data.toUInt() shl 8) or
+                            other.data2.data2.data.toUInt()
+                    val sum = int + otherInt
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot add $other to $this as the sum is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is QuadWord ->
+                    "Cannot add $other to $this as qword is too large to add to a dword.".right()
             }
+        }
 
-        override fun minus(other: DataType): DoubleWord =
-            when(other){
-                is Byte -> DoubleWord(data1, data2 - other)
-                is Word -> DoubleWord(data1, other - data2)
-                is DoubleWord -> DoubleWord((other.data1 - data1), (other.data2 - data2))
-                is QuadWord -> DoubleWord((other.data2.data1 - data1), (other.data2.data2 - data2))
+        override fun minus(other: DataType): Either<DoubleWord, String>{
+            val int = (data1.data1.data.toUInt() shl 24) or
+                    (data1.data2.data.toUInt() shl 16) or
+                    (data2.data1.data.toUInt() shl 8) or
+                    data2.data2.data.toUInt()
+            return when(other){
+                is Byte -> {
+                    val sum = other.data - int
+                    if(sum > 0xFFFFFFFFu){
+                        "Cannot subtract $other from $this as the sum is greater than size dword.".right()
+                    }else{
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = otherInt - int
+                    if(sum > 0xFFFFFFFFu){
+                        "Cannot subtract $other from $this as the diff is greater than size word.".right()
+                    }else{
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is DoubleWord -> {
+                    val otherInt = (other.data1.data1.data.toUInt() shl 24) or
+                            (other.data1.data2.data.toUInt() shl 16) or
+                            (other.data2.data1.data.toUInt() shl 8) or
+                            other.data2.data2.data.toUInt()
+                    val sum = otherInt - int
+                    if(sum > 0xFFFFFFFFu){
+                        "Cannot subtract $other from $this as the sum is greater than size dword.".right()
+                    }else{
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is QuadWord ->
+                    "Cannot subtract $other from $this as qword is too big to add to dword".right()
             }
+        }
 
-        override fun times(other: DataType): DoubleWord =
-            when(other){
-                is Byte -> DoubleWord(data1, data2 * other)
-                is Word -> DoubleWord(data1, other * data2)
-                is DoubleWord -> DoubleWord((other.data1 * data1), (other.data2 * data2))
-                is QuadWord -> DoubleWord((other.data2.data1 * data1), (other.data2.data2 * data2))
-            }
 
-        override fun div(other: DataType): DoubleWord =
-            when(other){
-                is Byte -> DoubleWord(data1, data2 / other)
-                is Word -> DoubleWord(data1, other / data2)
-                is DoubleWord -> DoubleWord((other.data1 / data1), (other.data2 / data2))
-                is QuadWord -> DoubleWord((other.data2.data1 / data1), (other.data2.data2 / data2))
+        override fun times(other: DataType): Either<DoubleWord, String> {
+            val int = (data1.data1.data.toUInt() shl 24) or
+                    (data1.data2.data.toUInt() shl 16) or
+                    (data2.data1.data.toUInt() shl 8) or
+                    data2.data2.data.toUInt()
+            return when (other) {
+                is Byte -> {
+                    val sum = int * other.data
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot multiply $other by $this as the product is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = int * otherInt
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot multiply $other by $this as the product is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is DoubleWord -> {
+                    val otherInt = (other.data1.data1.data.toUInt() shl 24) or
+                            (other.data1.data2.data.toUInt() shl 16) or
+                            (other.data2.data1.data.toUInt() shl 8) or
+                            other.data2.data2.data.toUInt()
+                    val sum = int * otherInt
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot multiply $other by $this as the product is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is QuadWord ->
+                    "Cannot subtract $other from $this as qword is too big to add to dword".right()
             }
+        }
+
+        override fun div(other: DataType): Either<DoubleWord, String> {
+            val int = (data1.data1.data.toUInt() shl 24) or
+                    (data1.data2.data.toUInt() shl 16) or
+                    (data2.data1.data.toUInt() shl 8) or
+                    data2.data2.data.toUInt()
+            return when (other) {
+                is Byte -> {
+                    val sum = int / other.data
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot divide $this by $other as the quotient is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = int / otherInt
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot divide $this by $other as the quotient is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is DoubleWord -> {
+                    val otherInt = other.data1.data1.data.toUInt() or
+                            other.data1.data2.data.toUInt() or
+                            other.data2.data1.data.toUInt() or
+                            other.data2.data2.data.toUInt()
+                    val sum = int / otherInt
+                    if (sum > 0xFFFFFFFFu) {
+                        "Cannot divide $this by $other as the quotient is greater than size dword.".right()
+                    } else {
+                        val highest = (sum shr 24) and 0xFFu
+                        val higher = (sum shr 16) and 0xFFu
+                        val lower = (sum shr 8) and 0xFFu
+                        val lowest = sum and 0xFFu
+                        DoubleWord(
+                            Word(
+                                Byte(highest.toUByte()),
+                                Byte(higher.toUByte())
+                            ),
+                            Word(
+                                Byte(lower.toUByte()),
+                                Byte(lowest.toUByte())
+                            )
+                        ).left()
+                    }
+                }
+                is QuadWord ->
+                    "Cannot divide $other by $this as qword is too big to divide dword by.".right()
+            }
+        }
 
         override fun toByte(): Byte = data2.data2
         override fun toWord(): Word = data2
@@ -332,6 +766,16 @@ sealed class DataType{
             }
         }
 
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append("0x")
+                val num = (data1.data1.data.toUInt() shl 24) or
+                        (data1.data2.data.toUInt() shl 16) or
+                        (data2.data1.data.toUInt() shl 8) or
+                        data2.data2.data.toUInt()
+                append(num.toString(16))
+            }
     }
     @ExperimentalUnsignedTypes
     data class QuadWord(val data1: DoubleWord, val data2: DoubleWord): DataType(){
@@ -426,77 +870,701 @@ sealed class DataType{
                 is QuadWord -> QuadWord(other.data1 shr data1, other.data2 shr data2)
             }
 
-        override fun plus(other: DataType): QuadWord =
-            when(other){
-                is Byte -> QuadWord(data1,
-                    DoubleWord(
-                        Word(
-                            Byte(0xff.toUByte()),
-                            Byte(0xff.toUByte())
-                        ),
-                        Word(
-                            Byte(0xff.toUByte()),
-                            Byte(0xff.toUByte())
-                        ) or other
-                    ) + data2.data2)
-                is Word -> QuadWord(data1, data2 + other)
-                is DoubleWord -> QuadWord(data1, other + data2)
-                is QuadWord -> QuadWord(other.data1 + data1, other.data2 + data2)
+        override fun plus(other: DataType): Either<QuadWord, String>{
+            val int = (data1.data1.data1.data.toULong() shl 54) or
+                    (data1.data1.data2.data.toULong() shl 48) or
+                    (data1.data2.data1.data.toULong() shl 40) or
+                    (data1.data2.data2.data.toULong() shl 36) or
+                    (data2.data1.data1.data.toULong() shl 24) or
+                    (data2.data1.data2.data.toULong() shl 16) or
+                    (data2.data2.data1.data.toULong() shl 8) or
+                    data2.data2.data2.data.toULong()
+            return when(other){
+                is Byte -> {
+                    val sum = int + other.data
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot add $this to $other as the sum is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = int + otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot add $this to $other as the sum is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is DoubleWord -> {
+                    val otherInt = other.data1.data1.data.toUInt() or
+                            other.data1.data2.data.toUInt() or
+                            other.data2.data1.data.toUInt() or
+                            other.data2.data2.data.toUInt()
+                    val sum = int + otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot add $this to $other as the sum is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is QuadWord ->{
+                    val otherInt = (other.data1.data1.data1.data.toUInt() shl 54) or
+                            (other.data1.data1.data2.data.toUInt() shl 48) or
+                            (other.data1.data2.data1.data.toUInt() shl 40) or
+                            (other.data1.data2.data2.data.toUInt() shl 36) or
+                            (other.data2.data1.data1.data.toUInt() shl 24) or
+                            (other.data2.data1.data2.data.toUInt() shl 16) or
+                            (other.data2.data2.data1.data.toUInt() shl 8) or
+                            other.data2.data2.data2.data.toUInt()
+                    val sum = int + otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot add $this to $other as the sum is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
             }
+        }
 
-        override fun minus(other: DataType): QuadWord =
-            when(other){
-                is Byte -> QuadWord(data1,
-                    DoubleWord(
-                        Word(
-                            Byte(0xff.toUByte()),
-                            Byte(0xff.toUByte())
-                        ),
-                        Word(
-                            Byte(0xff.toUByte()),
-                            Byte(0xff.toUByte())
-                        ) or other
-                    ) - data2.data2)
-                is Word -> QuadWord(data1, data2 - other)
-                is DoubleWord -> QuadWord(data1, other - data2)
-                is QuadWord -> QuadWord(other.data1 - data1, other.data2 - data2)
+        override fun minus(other: DataType): Either<QuadWord, String>{
+            val int = (data1.data1.data1.data.toULong() shl 54) or
+                    (data1.data1.data2.data.toULong() shl 48) or
+                    (data1.data2.data1.data.toULong() shl 40) or
+                    (data1.data2.data2.data.toULong() shl 36) or
+                    (data2.data1.data1.data.toULong() shl 24) or
+                    (data2.data1.data2.data.toULong() shl 16) or
+                    (data2.data2.data1.data.toULong() shl 8) or
+                    data2.data2.data2.data.toULong()
+            return when(other){
+                is Byte -> {
+                    val sum = int - other.data
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot add $this to $other as the sum is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = int - otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot subtract $this from $other as the difference is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is DoubleWord -> {
+                    val otherInt = other.data1.data1.data.toUInt() or
+                            other.data1.data2.data.toUInt() or
+                            other.data2.data1.data.toUInt() or
+                            other.data2.data2.data.toUInt()
+                    val sum = int - otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot subtract $this from $other as the difference is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is QuadWord ->{
+                    val otherInt = other.data1.data1.data1.data.toUInt() or
+                            other.data1.data1.data2.data.toUInt() or
+                            other.data1.data2.data1.data.toUInt() or
+                            other.data1.data2.data2.data.toUInt() or
+                            other.data2.data1.data1.data.toUInt() or
+                            other.data2.data1.data2.data.toUInt() or
+                            other.data2.data2.data1.data.toUInt() or
+                            other.data2.data2.data2.data.toUInt()
+                    val sum = int - otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot subtract $this from $other as the difference is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
             }
+        }
 
-        override fun times(other: DataType): QuadWord =
-            when(other){
-                is Byte -> QuadWord(data1,
-                    DoubleWord(
-                        Word(
-                            Byte(0xff.toUByte()),
-                            Byte(0xff.toUByte())
-                        ),
-                        Word(
-                            Byte(0xff.toUByte()),
-                            Byte(0xff.toUByte())
-                        ) or other
-                    ) * data2.data2)
-                is Word -> QuadWord(data1, data2 * other)
-                is DoubleWord -> QuadWord(data1, other * data2)
-                is QuadWord -> QuadWord(other.data1 * data1, other.data2 * data2)
+        override fun times(other: DataType): Either<QuadWord, String>{
+            val int = (data1.data1.data1.data.toULong() shl 54) or
+                    (data1.data1.data2.data.toULong() shl 48) or
+                    (data1.data2.data1.data.toULong() shl 40) or
+                    (data1.data2.data2.data.toULong() shl 36) or
+                    (data2.data1.data1.data.toULong() shl 24) or
+                    (data2.data1.data2.data.toULong() shl 16) or
+                    (data2.data2.data1.data.toULong() shl 8) or
+                    data2.data2.data2.data.toULong()
+            return when(other){
+                is Byte -> {
+                    val sum = int * other.data
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot multiply $this by $other as the product is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = int * otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot multiply $this by $other as the product is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is DoubleWord -> {
+                    val otherInt = other.data1.data1.data.toUInt() or
+                            other.data1.data2.data.toUInt() or
+                            other.data2.data1.data.toUInt() or
+                            other.data2.data2.data.toUInt()
+                    val sum = int * otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot multiply $this by $other as the product is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is QuadWord ->{
+                    val otherInt = other.data1.data1.data1.data.toUInt() or
+                            other.data1.data1.data2.data.toUInt() or
+                            other.data1.data2.data1.data.toUInt() or
+                            other.data1.data2.data2.data.toUInt() or
+                            other.data2.data1.data1.data.toUInt() or
+                            other.data2.data1.data2.data.toUInt() or
+                            other.data2.data2.data1.data.toUInt() or
+                            other.data2.data2.data2.data.toUInt()
+                    val sum = int * otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot multiply $this by $other as the product is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
             }
+        }
 
-        override fun div(other: DataType): QuadWord =
-            when(other){
-                is Byte -> QuadWord(data1,
-                    DoubleWord(
-                        Word(
-                            Byte(0xff.toUByte()),
-                            Byte(0xff.toUByte())
-                        ),
-                        Word(
-                            Byte(0xff.toUByte()),
-                            Byte(0xff.toUByte())
-                        ) or other
-                    ) / data2.data2)
-                is Word -> QuadWord(data1, data2 / other)
-                is DoubleWord -> QuadWord(data1, other / data2)
-                is QuadWord -> QuadWord(other.data1 / data1, other.data2 / data2)
+        override fun div(other: DataType): Either<QuadWord, String>{
+            val int = (data1.data1.data1.data.toULong() shl 54) or
+                    (data1.data1.data2.data.toULong() shl 48) or
+                    (data1.data2.data1.data.toULong() shl 40) or
+                    (data1.data2.data2.data.toULong() shl 36) or
+                    (data2.data1.data1.data.toULong() shl 24) or
+                    (data2.data1.data2.data.toULong() shl 16) or
+                    (data2.data2.data1.data.toULong() shl 8) or
+                    data2.data2.data2.data.toULong()
+            return when(other){
+                is Byte -> {
+                    val sum = int / other.data
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot divide $this by $other as the quotient is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is Word -> {
+                    val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
+                    val sum = int / otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot divide $this by $other as the quotient is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is DoubleWord -> {
+                    val otherInt = other.data1.data1.data.toUInt() or
+                            other.data1.data2.data.toUInt() or
+                            other.data2.data1.data.toUInt() or
+                            other.data2.data2.data.toUInt()
+                    val sum = int / otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot divide $this by $other as the quotient is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
+                is QuadWord ->{
+                    val otherInt = other.data1.data1.data1.data.toUInt() or
+                            other.data1.data1.data2.data.toUInt() or
+                            other.data1.data2.data1.data.toUInt() or
+                            other.data1.data2.data2.data.toUInt() or
+                            other.data2.data1.data1.data.toUInt() or
+                            other.data2.data1.data2.data.toUInt() or
+                            other.data2.data2.data1.data.toUInt() or
+                            other.data2.data2.data2.data.toUInt()
+                    val sum = int / otherInt
+                    if(sum > 0xFFFFFFFFFFFFFFFFu){
+                        "Cannot divide $this by $other as the quotient is greater than size qword.".right()
+                    }else{
+                        val highest = (sum shr 54) and 0xFFu
+                        val higher = (sum shr 48) and 0xFFu
+                        val middleMost = (sum shr 40) and 0xFFu
+                        val middle = (sum shr 36) and 0xFFu
+                        val middleLeast = (sum shr 24) and 0xFFu
+                        val lower = (sum shr 16) and 0xFFu
+                        val lowest = (sum shr 8) and 0xFFu
+                        val least = sum and 0xFFu
+                        QuadWord(
+                            DoubleWord(
+                                Word(
+                                    Byte(highest.toUByte()),
+                                    Byte(higher.toUByte())
+                                ),
+                                Word(
+                                    Byte(middleMost.toUByte()),
+                                    Byte(middle.toUByte())
+                                )
+                            ),
+                            DoubleWord(
+                                Word(
+                                    Byte(middleLeast.toUByte()),
+                                    Byte(lower.toUByte())
+                                ),
+                                Word(
+                                    Byte(lowest.toUByte()),
+                                    Byte(least.toUByte())
+                                )
+                            )
+                        ).left()
+                    }
+                }
             }
+        }
 
         override fun toByte(): Byte = data2.data2.data2
         override fun toDouble(): DoubleWord = data2
@@ -523,6 +1591,20 @@ sealed class DataType{
             }
         }
 
+        @ExperimentalStdlibApi
+        override fun toString(): String =
+            buildPrettyString {
+                append("0x")
+                val num = (data1.data1.data1.data.toULong() shl 54) or
+                        (data1.data1.data2.data.toULong() shl 48) or
+                        (data1.data2.data1.data.toULong() shl 40) or
+                        (data1.data2.data2.data.toULong() shl 36) or
+                        (data2.data1.data1.data.toULong() shl 24) or
+                        (data2.data1.data2.data.toULong() shl 16) or
+                        (data2.data2.data1.data.toULong() shl 8) or
+                        data2.data2.data2.data.toULong()
+                append(num.toString(16))
+            }
     }
 
     abstract infix fun shl(other: DataType): DataType
@@ -531,15 +1613,17 @@ sealed class DataType{
     abstract infix fun or(other: DataType): DataType
     abstract infix fun xor(other: DataType): DataType
     abstract fun inv(): DataType
-    abstract operator fun plus(other: DataType): DataType
-    abstract operator fun minus(other: DataType): DataType
-    abstract operator fun times(other: DataType): DataType
-    abstract operator fun div(other: DataType): DataType
+    abstract fun plus(other: DataType): Either<DataType, String>
+    abstract fun minus(other: DataType): Either<DataType, String>
+    abstract fun times(other: DataType): Either<DataType, String>
+    abstract fun div(other: DataType): Either<DataType, String>
     abstract operator fun compareTo(other: DataType): Int
 
     abstract fun toByte(): Byte
     abstract fun toWord(): Word
     abstract fun toDouble(): DoubleWord
     abstract fun toQuad(): QuadWord
+
+    abstract override fun toString(): String
 
 }

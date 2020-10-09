@@ -1,3 +1,4 @@
+import arrow.core.Either
 import java.io.File
 
 
@@ -455,12 +456,18 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     val sum = when(right){
-                        is DataType.Byte -> memory.readByte(left.data) + right
-                        is DataType.Word -> memory.readWord(left.data) + right
-                        is DataType.DoubleWord -> memory.readDoubleWord(left.data) + right
-                        is DataType.QuadWord -> memory.readQuadWord(left.data) + right
+                        is DataType.Byte -> memory.readByte(left.data).plus(right)
+                        is DataType.Word -> memory.readWord(left.data).plus(right)
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data).plus(right)
+                        is DataType.QuadWord -> memory.readQuadWord(left.data).plus(right)
                     }
-                    memory.write(left.data, sum)
+                    when(sum){
+                        is Either.Left -> memory.write(left.data, sum.a)
+                        is Either.Right -> {
+                            println(sum.b)
+                            return@binaryOperation
+                        }
+                    }
                 }
                 InstructionSet.SUB -> binaryOperation{ left, right ->
                     if(left !is DataType.Byte){
@@ -468,12 +475,18 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     val diff = when(right){
-                        is DataType.Byte ->  right - memory.readByte(left.data)
-                        is DataType.Word -> right - memory.readWord(left.data)
-                        is DataType.DoubleWord -> right - memory.readDoubleWord(left.data)
-                        is DataType.QuadWord -> right - memory.readQuadWord(left.data)
+                        is DataType.Byte ->  right.minus(memory.readByte(left.data))
+                        is DataType.Word -> right.minus(memory.readWord(left.data))
+                        is DataType.DoubleWord -> right.minus(memory.readDoubleWord(left.data))
+                        is DataType.QuadWord -> right.minus(memory.readQuadWord(left.data))
                     }
-                    memory.write(left.data, diff)
+                    when(diff){
+                        is Either.Left -> memory.write(left.data, diff.a)
+                        is Either.Right -> {
+                            println(diff.b)
+                            return@binaryOperation
+                        }
+                    }
                 }
                 InstructionSet.MUL -> binaryOperation{ left, right ->
                     if(left !is DataType.Byte){
@@ -481,12 +494,18 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     val product = when(right){
-                        is DataType.Byte -> memory.readByte(left.data) * right
-                        is DataType.Word -> memory.readWord(left.data) * right
-                        is DataType.DoubleWord -> memory.readDoubleWord(left.data) * right
-                        is DataType.QuadWord -> memory.readQuadWord(left.data) * right
+                        is DataType.Byte -> memory.readByte(left.data).times(right)
+                        is DataType.Word -> memory.readWord(left.data).times(right)
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data).times(right)
+                        is DataType.QuadWord -> memory.readQuadWord(left.data).times(right)
                     }
-                    memory.write(left.data, product)
+                    when(product){
+                        is Either.Left -> memory.write(left.data, product.a)
+                        is Either.Right -> {
+                            println(product.b)
+                            return@binaryOperation
+                        }
+                    }
                 }
                 InstructionSet.DIV -> binaryOperation{ left, right ->
                     if(left !is DataType.Byte){
@@ -494,12 +513,18 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     val quotient = when(right){
-                        is DataType.Byte -> right / memory.readByte(left.data)
-                        is DataType.Word -> right / memory.readWord(left.data)
-                        is DataType.DoubleWord -> right / memory.readDoubleWord(left.data)
-                        is DataType.QuadWord -> right / memory.readQuadWord(left.data)
+                        is DataType.Byte -> right.div(memory.readByte(left.data))
+                        is DataType.Word -> right.div(memory.readWord(left.data))
+                        is DataType.DoubleWord -> right.div(memory.readDoubleWord(left.data))
+                        is DataType.QuadWord -> right.div(memory.readQuadWord(left.data))
                     }
-                    memory.write(left.data, quotient)
+                    when(quotient){
+                        is Either.Left -> memory.write(left.data, quotient.a)
+                        is Either.Right -> {
+                            println(quotient.b)
+                            return@binaryOperation
+                        }
+                    }
                 }
                 InstructionSet.LE -> binaryOperation{ left, right ->
                     val cmp = left <= right

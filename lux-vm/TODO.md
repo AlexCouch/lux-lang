@@ -48,7 +48,14 @@
 
 * [x] Add overflow logic to data arithmetics so that if a byte overflows then we reset that byte and flow into the next byte (words, dwords, qwords)
 
-## Version 0.0.3-prototype (FFI)
+## Version 0.0.3-prototype (Directives, Memory layout changes, Sections)
+* [ ] Correct memory layout so that the executable, stack, and memory are all part of the same contiguous region of memory.
+    - This is necessary for data sections (data, rodata, bss) to coexist with the memory, stack, and instructions
+    - The below directives can be implemented correctly
+* [ ] Add a way to create new directives
+* [ ] Add directives such as
+    - [ ] `.string` for creating a string without null termination
+    - [ ] `.ascii` for creating a string with null termination
 * [ ] Implement sections
     - ```
         ;This is the start of the code section where the code section where all the executable code goes
@@ -67,6 +74,12 @@
         @data
             my_str: .ascii 'Hello, world!'
       ```
+    
+## Version 0.0.4-prototype (Linker)
+* [ ] Add a directive for including another lasm file
+    - `.include [string]`
+* [ ] Add a new output type of *lib*, with extension *.llib
+* [ ] Create linker so that llib's can be linked into single *.lexe file
 * [ ] Implement platform sections
     - This is so that certain kinds of data and code exist for a certain platform.
     - This is also good for directives such as `.load`, `.include`, `.using`
@@ -78,10 +91,8 @@
         @linux
             .load 'some_lib_linux.so'
       ```
-* [ ] Implement directive for including other lasm files during assembly
-    - ```
-        .include 'some_lib.lasm'
-      ```
+
+## Version 0.0.5-prototype (FFI)
 * [ ] Implement directive for loading up a native library (.so, .a, .dll, .dyn) to be used as FFI
     - This will require a way for the virtual machine to dynamically load up the foreign library via JNA at runtime
     - ```

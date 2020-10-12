@@ -1,5 +1,6 @@
 import arrow.core.*
 
+@ExperimentalUnsignedTypes
 class Lexer(val input: String){
     private var currentPos = TokenPos.default
     private val scanner = Scanner(input)
@@ -42,7 +43,7 @@ class Lexer(val input: String){
     fun nextTab(): Option<Char>{
         val next = scanner.next()
         currentPos =
-            TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 1), scanner.idx, currentPos.indentLevel + 1)
+            TokenPos(Position(currentPos.pos.line, currentPos.pos.col + 4), scanner.idx, currentPos.indentLevel + 1)
         return next
     }
 
@@ -72,9 +73,9 @@ class Lexer(val input: String){
                                         advance()
                                     }
                                 }
-                                if(buf == "    "){
-                                    nextTab()
-                                }
+//                                if(buf == "    "){
+//                                    nextTab()
+//                                }
                             }
                         }
                         t.isLetter() -> {
@@ -113,7 +114,7 @@ class Lexer(val input: String){
                             try{
                                 tokens + buf.substringAfter("x").let {
                                     when(it.length){
-                                        2 -> Token.ByteLiteralToken(it.toByte(16), startPos, currentPos)
+                                        2 -> Token.ByteLiteralToken(it.toUByte(16), startPos, currentPos)
                                         4 -> Token.ShortLiteralToken(it.toShort(16), startPos, currentPos)
                                         8 -> Token.IntegerLiteralToken(it.toInt(16), startPos, currentPos)
                                         16 -> Token.LongLiteralToken(it.toLong(16), startPos, currentPos)

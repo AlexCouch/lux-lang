@@ -140,7 +140,8 @@ sealed class Token(open val startPos: TokenPos, open val endPos: TokenPos){
             }
     }
 
-    data class ByteLiteralToken(val literal: Byte, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
+    @ExperimentalUnsignedTypes
+    data class ByteLiteralToken(val literal: UByte, override val startPos: TokenPos, override val endPos: TokenPos): Token(startPos, endPos){
         @ExperimentalStdlibApi
         override fun toString(): String =
             buildPrettyString {

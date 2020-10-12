@@ -133,14 +133,14 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
-    fun writeByte(tokens: TokenStream): Either<UByteArray, String>{
-        var bytes = ubyteArrayOf(InstructionSet.BYTE.code)
+    fun writeByte(tokens: TokenStream, signed: Boolean = false): Either<UByteArray, String>{
+        var bytes = ubyteArrayOf(if(signed) InstructionSet.SBYTE.code else InstructionSet.BYTE.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
         }
         when(next){
-            is Token.ByteLiteralToken -> bytes += next.literal.toUByte() and 0xFF.toUByte()
+            is Token.ByteLiteralToken -> bytes += next.literal and 0xFF.toUByte()
             is Token.ShortLiteralToken -> return "Expected data of size byte or smaller, instead found word".right()
             is Token.IntegerLiteralToken -> return "Expected data of size byte or smaller, instead found double word".right()
             is Token.LongLiteralToken -> return "Expected data of size byte or smaller, instead found quad word".right()
@@ -149,8 +149,8 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
-    fun writeWord(tokens: TokenStream): Either<UByteArray, String>{
-        var bytes = ubyteArrayOf(InstructionSet.WORD.code)
+    fun writeWord(tokens: TokenStream, signed: Boolean = false): Either<UByteArray, String>{
+        var bytes = ubyteArrayOf(if(signed) InstructionSet.SWORD.code else InstructionSet.WORD.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
@@ -170,8 +170,8 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
-    fun writeDoubleWord(tokens: TokenStream): Either<UByteArray, String>{
-        var bytes = ubyteArrayOf(InstructionSet.DWORD.code)
+    fun writeDoubleWord(tokens: TokenStream, signed: Boolean = false): Either<UByteArray, String>{
+        var bytes = ubyteArrayOf(if(signed) InstructionSet.SDWORD.code else InstructionSet.DWORD.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
@@ -201,8 +201,8 @@ class ASMLoader(private val file: File){
         return bytes.left()
     }
 
-    fun writeQuadWord(tokens: TokenStream): Either<UByteArray, String>{
-        var bytes = ubyteArrayOf(InstructionSet.QWORD.code)
+    fun writeQuadWord(tokens: TokenStream, signed: Boolean = false): Either<UByteArray, String>{
+        var bytes = ubyteArrayOf(if(signed) InstructionSet.SQWORD.code else InstructionSet.QWORD.code)
         val next = when(val next = tokens.next()){
             is Some -> next.t
             is None -> return "Expected an integer value but instead found EOF".right()
@@ -216,7 +216,7 @@ class ASMLoader(private val file: File){
                 bytes += 0u
                 bytes += 0u
                 bytes += 0u
-                bytes += (next.literal).toUByte()
+                bytes += (next.literal)
             }
             is Token.ShortLiteralToken -> {
                 bytes += 0.toUByte()
@@ -355,6 +355,10 @@ class ASMLoader(private val file: File){
                     lexeme.isSizeModifier -> {
                         when(lexeme){
                             "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "SBYTE" -> bytes += when(val result = writeByte(tokens, true)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
@@ -650,7 +654,15 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
+                            "SMOVB" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SMOVB, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
                             "MOVW" -> bytes += when(val result = parseBinaryOperator(InstructionSet.MOVW, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "SMOVW" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SMOVW, tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
@@ -658,7 +670,15 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
-                            "MOQ" -> bytes += when(val result = parseBinaryOperator(InstructionSet.MOVQ, tokens)){
+                            "SMOVD" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SMOVD, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "MOVQ" -> bytes += when(val result = parseBinaryOperator(InstructionSet.MOVQ, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "SMOVQ" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SMOVQ, tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
@@ -675,7 +695,15 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
+                            "SADD" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SADD, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
                             "SUB" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SUB, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "SSUB" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SSUB, tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
@@ -683,7 +711,15 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
+                            "SMUL" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SMUL, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
                             "DIV" -> bytes += when(val result = parseBinaryOperator(InstructionSet.DIV, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "SDIV" -> bytes += when(val result = parseBinaryOperator(InstructionSet.SDIV, tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }

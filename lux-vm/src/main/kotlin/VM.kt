@@ -146,6 +146,7 @@ class Memory{
     fun write(dest: UByte, target: DataType){
         when(target){
             is DataType.Byte -> writeByte(dest, target)
+            is DataType.SignedByte -> writeByte(dest, target.toByte())
             is DataType.Word -> writeWord(dest, target)
             is DataType.DoubleWord -> writeDouble(dest, target)
             is DataType.QuadWord -> writeQuad(dest, target)
@@ -179,6 +180,7 @@ class Memory{
     }
 
     fun readByte(dest: UByte) = DataType.Byte(memory[dest.toInt()])
+    fun readSignedByte(dest: UByte) = DataType.SignedByte(memory[dest.toInt()].toByte())
     fun readWord(dest: UByte) = DataType.Word(DataType.Byte(memory[dest.toInt()]), DataType.Byte(memory[dest.toInt()+1]))
     fun readDoubleWord(dest: UByte) = DataType.DoubleWord(
         DataType.Word(
@@ -298,9 +300,13 @@ class VM(val binary: Executable){
                     reference()
                 }
                 InstructionSet.BYTE -> binary.nextByte()
+                InstructionSet.SBYTE -> binary.nextByte()
                 InstructionSet.WORD -> binary.nextWord()
+                InstructionSet.SWORD -> binary.nextWord()
                 InstructionSet.DWORD -> binary.nextDoubleWord()
+                InstructionSet.SDWORD -> binary.nextDoubleWord()
                 InstructionSet.QWORD -> binary.nextQuadWord()
+                InstructionSet.SQWORD -> binary.nextQuadWord()
                 else -> right
             }
         }else{
@@ -457,6 +463,27 @@ class VM(val binary: Executable){
                     }
                     val sum = when(right){
                         is DataType.Byte -> memory.readByte(left.data).plus(right)
+                        is DataType.SignedByte -> memory.readSignedByte(left.data).plus(right)
+                        is DataType.Word -> memory.readWord(left.data).plus(right)
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data).plus(right)
+                        is DataType.QuadWord -> memory.readQuadWord(left.data).plus(right)
+                    }
+                    when(sum){
+                        is Either.Left -> memory.write(left.data, sum.a)
+                        is Either.Right -> {
+                            println(sum.b)
+                            return@binaryOperation
+                        }
+                    }
+                }
+                InstructionSet.SADD -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    val sum = when(right){
+                        is DataType.Byte -> memory.readSignedByte(left.data).plus(right)
+                        is DataType.SignedByte -> memory.readSignedByte(left.data).plus(right)
                         is DataType.Word -> memory.readWord(left.data).plus(right)
                         is DataType.DoubleWord -> memory.readDoubleWord(left.data).plus(right)
                         is DataType.QuadWord -> memory.readQuadWord(left.data).plus(right)
@@ -476,6 +503,27 @@ class VM(val binary: Executable){
                     }
                     val diff = when(right){
                         is DataType.Byte ->  right.minus(memory.readByte(left.data))
+                        is DataType.SignedByte ->  right.minus(memory.readSignedByte(left.data))
+                        is DataType.Word -> right.minus(memory.readWord(left.data))
+                        is DataType.DoubleWord -> right.minus(memory.readDoubleWord(left.data))
+                        is DataType.QuadWord -> right.minus(memory.readQuadWord(left.data))
+                    }
+                    when(diff){
+                        is Either.Left -> memory.write(left.data, diff.a)
+                        is Either.Right -> {
+                            println(diff.b)
+                            return@binaryOperation
+                        }
+                    }
+                }
+                InstructionSet.SSUB -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    val diff = when(right){
+                        is DataType.Byte ->  right.minus(memory.readSignedByte(left.data))
+                        is DataType.SignedByte ->  right.minus(memory.readSignedByte(left.data))
                         is DataType.Word -> right.minus(memory.readWord(left.data))
                         is DataType.DoubleWord -> right.minus(memory.readDoubleWord(left.data))
                         is DataType.QuadWord -> right.minus(memory.readQuadWord(left.data))
@@ -495,6 +543,27 @@ class VM(val binary: Executable){
                     }
                     val product = when(right){
                         is DataType.Byte -> memory.readByte(left.data).times(right)
+                        is DataType.SignedByte -> memory.readSignedByte(left.data).times(right)
+                        is DataType.Word -> memory.readWord(left.data).times(right)
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data).times(right)
+                        is DataType.QuadWord -> memory.readQuadWord(left.data).times(right)
+                    }
+                    when(product){
+                        is Either.Left -> memory.write(left.data, product.a)
+                        is Either.Right -> {
+                            println(product.b)
+                            return@binaryOperation
+                        }
+                    }
+                }
+                InstructionSet.SMUL -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    val product = when(right){
+                        is DataType.Byte -> memory.readSignedByte(left.data).times(right)
+                        is DataType.SignedByte -> memory.readSignedByte(left.data).times(right)
                         is DataType.Word -> memory.readWord(left.data).times(right)
                         is DataType.DoubleWord -> memory.readDoubleWord(left.data).times(right)
                         is DataType.QuadWord -> memory.readQuadWord(left.data).times(right)
@@ -514,6 +583,27 @@ class VM(val binary: Executable){
                     }
                     val quotient = when(right){
                         is DataType.Byte -> right.div(memory.readByte(left.data))
+                        is DataType.SignedByte -> right.div(memory.readSignedByte(left.data))
+                        is DataType.Word -> right.div(memory.readWord(left.data))
+                        is DataType.DoubleWord -> right.div(memory.readDoubleWord(left.data))
+                        is DataType.QuadWord -> right.div(memory.readQuadWord(left.data))
+                    }
+                    when(quotient){
+                        is Either.Left -> memory.write(left.data, quotient.a)
+                        is Either.Right -> {
+                            println(quotient.b)
+                            return@binaryOperation
+                        }
+                    }
+                }
+                InstructionSet.SDIV -> binaryOperation{ left, right ->
+                    if(left !is DataType.Byte){
+                        println("Expected a data type of byte for left operand but instead got $right")
+                        return@binaryOperation
+                    }
+                    val quotient = when(right){
+                        is DataType.Byte -> right.div(memory.readSignedByte(left.data))
+                        is DataType.SignedByte -> right.div(memory.readSignedByte(left.data))
                         is DataType.Word -> right.div(memory.readWord(left.data))
                         is DataType.DoubleWord -> right.div(memory.readDoubleWord(left.data))
                         is DataType.QuadWord -> right.div(memory.readQuadWord(left.data))

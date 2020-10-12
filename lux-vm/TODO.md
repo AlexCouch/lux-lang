@@ -35,14 +35,14 @@
     
 * [ ] Change the data to be unsigned bytes, and implement signed version of instructions:
     - [x] Change default instructions to operate on unsigned bytes
-    - [ ] movsb : move signed bytes
-    - [ ] movsw : move signed word
-    - [ ] movsd : move signed double word
-    - [ ] movsq : mov signed quad word
-    - [ ] addsb : add signed byte (right) to given address (left)
-    - [ ] subsb : sub signed byte (right) to given address (left)
-    - [ ] mulsb : multiply signed byte (right) to given address (left)
-    - [ ] divsb : divide signed byte (right) to given address (left)
+    - [ ] smovb : move signed byte
+    - [ ] smovw : move signed word
+    - [ ] smovd : mov signed double word
+    - [ ] smovq : mov signed quad word
+    - [x] sadd : add signed byte (right) to given address (left)
+    - [x] ssub : sub signed byte (right) to given address (left)
+    - [x] smul : multiply signed byte (right) to given address (left)
+    - [x] sdiv : divide signed byte (right) to given address (left)
     
     - This will ensure that any time that signed data is never specified, then we will always have the unsigned data available for use for unsigned operations
 

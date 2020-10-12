@@ -33,12 +33,8 @@
 * [x] Finish implementing bitwise opcodes and verify their operations are accurate and correct
     - Make sure that the bitwise operations between different sized data makes sense and works as it should
     
-* [ ] Change the data to be unsigned bytes, and implement signed version of instructions:
+* [x] Change the data to be unsigned bytes, and implement signed version of instructions:
     - [x] Change default instructions to operate on unsigned bytes
-    - [ ] smovb : move signed byte
-    - [ ] smovw : move signed word
-    - [ ] smovd : mov signed double word
-    - [ ] smovq : mov signed quad word
     - [x] sadd : add signed byte (right) to given address (left)
     - [x] ssub : sub signed byte (right) to given address (left)
     - [x] smul : multiply signed byte (right) to given address (left)

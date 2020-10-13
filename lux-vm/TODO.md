@@ -43,7 +43,7 @@
     - This will ensure that any time that signed data is never specified, then we will always have the unsigned data available for use for unsigned operations
 
 * [x] Add overflow logic to data arithmetics so that if a byte overflows then we reset that byte and flow into the next byte (words, dwords, qwords)
-* [ ] Give `pop` an operand for location to pop off the stack to
+* [x] Give `pop` an operand for location to pop off the stack to
 
 * [ ] Add variadic operands for certain operators, by implementing operand specifiers
     - [ ] No operands
@@ -55,6 +55,13 @@
         mov     0x15 - 0x04, 0x35          ;Mov 0x35 into 0x15 - 0x04 (0x11)
         mov     0x05 * 3 - 4, 0x35         ;Mov 0x35 into 0x05 * 3 (0x0f) - 4 (0x0b)
       ```
+* [ ] Floating point integers and arithmetic
+    - Add instructions for moving a floating point integer into memory addresses
+    - Add instructions for doing arithmetic with floating points
+        - fadd
+        - fsub
+        - fmul
+        - fdiv
 
 ## Version 0.0.3-prototype (Directives, Memory layout changes, Sections)
 * [ ] Correct memory layout so that the executable, stack, and memory are all part of the same contiguous region of memory.

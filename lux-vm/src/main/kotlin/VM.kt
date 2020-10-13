@@ -448,7 +448,14 @@ class VM(val binary: Executable){
                 InstructionSet.PUSH -> unaryOperator{ operand ->
                     stack.push(operand)
                 }
-                InstructionSet.POP -> stack.pop()
+                InstructionSet.POP -> unaryOperator { operand ->
+                    if(operand !is DataType.Byte){
+                        println("Expected operand to be of size data but was instead $operand")
+                        return@unaryOperator
+                    }
+                    memory.write(operand.data, DataType.Byte(stack.top))
+                    stack.pop()
+                }
                 InstructionSet.JMP -> unaryOperator { operand ->
                     if(operand !is DataType.Byte){
                         println("Expected operand to be of size data but was instead $operand")

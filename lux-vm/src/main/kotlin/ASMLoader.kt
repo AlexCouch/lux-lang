@@ -1,5 +1,4 @@
 import arrow.core.*
-import arrow.core.extensions.option.foldable.fold
 import java.io.File
 import kotlin.experimental.and
 
@@ -296,12 +295,12 @@ class ASMLoader(private val file: File){
         }
     }
 
-    private fun parsePush(tokens: TokenStream): Either<UByteArray, String>{
+    private fun parseUnary(opcode: InstructionSet, tokens: TokenStream): Either<UByteArray, String>{
         val operand = when(val next = tokens.next()){
-            is None -> return "Expected a left operand after PUSH instruction but instead found EOF".right()
+            is None -> return "Expected a left operand after JMP instruction but instead found EOF".right()
             is Some -> next.t
         }
-        var bytes = ubyteArrayOf(InstructionSet.PUSH.code)
+        var bytes = ubyteArrayOf(opcode.code)
         when(operand){
             is Token.IntegerLiteralToken,
             is Token.ByteLiteralToken,
@@ -310,23 +309,6 @@ class ASMLoader(private val file: File){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
-            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
-                is Either.Left -> result.a
-                is Either.Right -> return result
-            }
-            is Token.IdentifierToken -> return "Labels are not yet implemented!".right()
-        }
-        return bytes.left()
-    }
-
-    private fun parseJump(tokens: TokenStream): Either<UByteArray, String>{
-        val operand = when(val next = tokens.next()){
-            is None -> return "Expected a left operand after JMP instruction but instead found EOF".right()
-            is Some -> next.t
-        }
-        var bytes = ubyteArrayOf(InstructionSet.JMP.code)
-        when(operand){
-            is Token.IntegerLiteralToken -> bytes += operand.literal.toUByte()
             is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
@@ -682,12 +664,15 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
-                            "PUSH" -> bytes += when(val result = parsePush(tokens)){
+                            "PUSH" -> bytes += when(val result = parseUnary(InstructionSet.PUSH, tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
-                            "POP" -> bytes += InstructionSet.POP.code
-                            "JMP" -> bytes += when(val result = parseJump(tokens)){
+                            "POP" -> bytes += when(val result = parseUnary(InstructionSet.POP, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
+                            }
+                            "JMP" -> bytes += when(val result = parseUnary(InstructionSet.JMP, tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }

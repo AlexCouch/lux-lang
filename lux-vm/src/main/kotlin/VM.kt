@@ -509,11 +509,11 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     val diff = when(right){
-                        is DataType.Byte ->  right.minus(memory.readByte(left.data))
-                        is DataType.SignedByte ->  right.minus(memory.readSignedByte(left.data))
-                        is DataType.Word -> right.minus(memory.readWord(left.data))
-                        is DataType.DoubleWord -> right.minus(memory.readDoubleWord(left.data))
-                        is DataType.QuadWord -> right.minus(memory.readQuadWord(left.data))
+                        is DataType.Byte ->  memory.readByte(left.data).minus(right)
+                        is DataType.SignedByte ->  memory.readSignedByte(left.data).minus(right)
+                        is DataType.Word -> memory.readWord(left.data).minus(right)
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data).minus(right)
+                        is DataType.QuadWord -> memory.readQuadWord(left.data).minus(right)
                     }
                     when(diff){
                         is Either.Left -> memory.write(left.data, diff.a)
@@ -529,11 +529,11 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     val diff = when(right){
-                        is DataType.Byte ->  right.minus(memory.readSignedByte(left.data))
-                        is DataType.SignedByte ->  right.minus(memory.readSignedByte(left.data))
-                        is DataType.Word -> right.minus(memory.readWord(left.data))
-                        is DataType.DoubleWord -> right.minus(memory.readDoubleWord(left.data))
-                        is DataType.QuadWord -> right.minus(memory.readQuadWord(left.data))
+                        is DataType.Byte ->  memory.readSignedByte(left.data).minus(right)
+                        is DataType.SignedByte ->  memory.readSignedByte(left.data).minus(right)
+                        is DataType.Word -> memory.readWord(left.data).minus(right)
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data).minus(right)
+                        is DataType.QuadWord -> memory.readQuadWord(left.data).minus(right)
                     }
                     when(diff){
                         is Either.Left -> memory.write(left.data, diff.a)
@@ -589,11 +589,11 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     val quotient = when(right){
-                        is DataType.Byte -> right.div(memory.readByte(left.data))
-                        is DataType.SignedByte -> right.div(memory.readSignedByte(left.data))
-                        is DataType.Word -> right.div(memory.readWord(left.data))
-                        is DataType.DoubleWord -> right.div(memory.readDoubleWord(left.data))
-                        is DataType.QuadWord -> right.div(memory.readQuadWord(left.data))
+                        is DataType.Byte ->  memory.readSignedByte(left.data).div(right)
+                        is DataType.SignedByte ->  memory.readSignedByte(left.data).div(right)
+                        is DataType.Word -> memory.readWord(left.data).minus(right)
+                        is DataType.DoubleWord -> memory.readDoubleWord(left.data).div(right)
+                        is DataType.QuadWord -> memory.readQuadWord(left.data).div(right)
                     }
                     when(quotient){
                         is Either.Left -> memory.write(left.data, quotient.a)

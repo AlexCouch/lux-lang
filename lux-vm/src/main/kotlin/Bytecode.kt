@@ -304,4 +304,23 @@ enum class InstructionSet(val code: UByte){
      * saving the result in the given address.
      */
     SHL(0x95.toUByte()),
+
+    /**
+     * This opcode is used as a variadic operand for telling the VM that there are no operands.
+     * All opcodes without operands must have this operand.
+     *
+     * POP      => POP NOARGS
+     */
+    NOARGS(0x30u),
+
+    /**
+     * This opcode is used as a variadic operand for telling the VM that there are a certain number of operands.
+     * This is used by opcodes with at least 1 operand.
+     *
+     *  MOV    0x05, 0x05 + 0x03 => MOV ARGS 4 0x05 0x05 OFFSET 0x03
+     *
+     *  POP 0x05       => POP ARGS 1 0x05
+     *
+     */
+    ARGS(0x31u)
 }

@@ -797,7 +797,7 @@ sealed class DataType{
                     data2.data2.data.toUInt()
             return when(other){
                 is Byte -> {
-                    val sum = other.data - int
+                    val sum = int - other.data
                     if(sum > 0xFFFFFFFFu){
                         "Cannot subtract $other from $this as the sum is greater than size dword.".right()
                     }else{
@@ -818,7 +818,7 @@ sealed class DataType{
                     }
                 }
                 is SignedByte -> {
-                    val sum = other.data.toUByte() - int
+                    val sum = int - other.data.toUByte()
                     if(sum > 0xFFFFFFFFu){
                         "Cannot subtract $other from $this as the sum is greater than size dword.".right()
                     }else{
@@ -840,7 +840,7 @@ sealed class DataType{
                 }
                 is Word -> {
                     val otherInt = other.data1.data.toUInt() or other.data2.data.toUInt()
-                    val sum = otherInt - int
+                    val sum = int - otherInt
                     if(sum > 0xFFFFFFFFu){
                         "Cannot subtract $other from $this as the diff is greater than size word.".right()
                     }else{
@@ -865,7 +865,7 @@ sealed class DataType{
                             (other.data1.data2.data.toUInt() shl 16) or
                             (other.data2.data1.data.toUInt() shl 8) or
                             other.data2.data2.data.toUInt()
-                    val sum = otherInt - int
+                    val sum = int - otherInt
                     if(sum > 0xFFFFFFFFu){
                         "Cannot subtract $other from $this as the sum is greater than size dword.".right()
                     }else{

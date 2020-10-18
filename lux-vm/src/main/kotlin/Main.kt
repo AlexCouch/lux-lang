@@ -5,6 +5,7 @@ import kotlinx.cli.ArgType
 import kotlinx.cli.required
 import java.io.File
 
+@ExperimentalUnsignedTypes
 @ExperimentalStdlibApi
 fun main(args: Array<String>){
     val parser = ArgParser("lux-vm")

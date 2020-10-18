@@ -295,21 +295,41 @@ class ASMLoader(private val file: File){
         }
     }
 
+    private fun isInstruction(token: Token) =
+        when(token){
+            is Token.IdentifierToken -> InstructionSet.values().any { it.name == token.lexeme.toUpperCase() }
+            else -> false
+        }
+
+    private fun parseUnaryOrNone(opcode: InstructionSet, tokens: TokenStream): Either<UByteArray, String>{
+        val operand = when(val next = tokens.peek){
+            is None -> return "Expected a left operand after JMP instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        var bytes = ubyteArrayOf(opcode.code)
+        if(isInstruction(operand) || operand is Token.SemicolonToken){
+            bytes += InstructionSet.NOARGS.code
+            return bytes.left()
+        }
+        return parseUnary(opcode, tokens)
+    }
+
     private fun parseUnary(opcode: InstructionSet, tokens: TokenStream): Either<UByteArray, String>{
         val operand = when(val next = tokens.next()){
             is None -> return "Expected a left operand after JMP instruction but instead found EOF".right()
             is Some -> next.t
         }
         var bytes = ubyteArrayOf(opcode.code)
+        var data = ubyteArrayOf()
         when(operand){
             is Token.IntegerLiteralToken,
             is Token.ByteLiteralToken,
             is Token.LongLiteralToken,
-            is Token.ShortLiteralToken      -> bytes += when(val result = parseIntegerToBytes(operand)){
+            is Token.ShortLiteralToken      -> data += when(val result = parseIntegerToBytes(operand)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
-            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+            is Token.LBracketToken -> data += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
@@ -317,9 +337,11 @@ class ASMLoader(private val file: File){
                 if(operand.lexeme !in labels){
                     return "Label ${operand.lexeme} does not exists".right()
                 }
-                bytes += labels[operand.lexeme]!!.toUByte()
+                data += labels[operand.lexeme]!!.toUByte()
             }
         }
+        bytes += ubyteArrayOf(InstructionSet.ARGS.code, (data.size.toUByte()-1u).toUByte())
+        bytes += data
         return bytes.left()
     }
 
@@ -329,30 +351,31 @@ class ASMLoader(private val file: File){
             is Some -> next.t
         }
         var bytes = ubyteArrayOf(opcode.code)
+        var data = ubyteArrayOf()
         when(leftOperand){
             is Token.IdentifierToken -> {
                 val lexeme = leftOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> bytes += InstructionSet.TOP.code
+                    lexeme == "TOP" -> data += InstructionSet.TOP.code
                     lexeme.isSizeModifier -> {
                         when(lexeme){
-                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                            "BYTE" -> data += when(val result = writeByte(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "SBYTE" -> bytes += when(val result = writeByte(tokens, true)){
+                            "SBYTE" -> data += when(val result = writeByte(tokens, true)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                            "WORD" -> data += when(val result = writeWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                            "DWORD" -> data += when(val result = writeDoubleWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                            "QWORD" -> data += when(val result = writeQuadWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
@@ -360,18 +383,18 @@ class ASMLoader(private val file: File){
                                 if(leftOperand.lexeme !in labels){
                                     return "Label ${leftOperand.lexeme} does not exists".right()
                                 }
-                                bytes += labels[leftOperand.lexeme]!!.toUByte()
+                                data += labels[leftOperand.lexeme]!!.toUByte()
                             }
                         }
                     }
                 }
             }
-            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+            is Token.LBracketToken -> data += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
-            is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toUByte()
-            is Token.ByteLiteralToken -> bytes += leftOperand.literal.toUByte() and 0xFF.toUByte()
+            is Token.IntegerLiteralToken -> data += leftOperand.literal.toUByte()
+            is Token.ByteLiteralToken -> data += leftOperand.literal.toUByte() and 0xFF.toUByte()
             else -> return "Expected either a memory address destination or REF".right()
         }
         when(val next = tokens.next()){
@@ -390,22 +413,26 @@ class ASMLoader(private val file: File){
             is Token.IdentifierToken -> {
                 val lexeme = rightOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> bytes += InstructionSet.TOP.code
+                    lexeme == "TOP" -> data += InstructionSet.TOP.code
                     lexeme.isSizeModifier -> {
                         when(lexeme){
-                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                            "BYTE" -> data += when(val result = writeByte(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                            "SBYTE" -> data += when(val result = writeByte(tokens, true)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                            "WORD" -> data += when(val result = writeWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                            "DWORD" -> data += when(val result = writeDoubleWord(tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                            "QWORD" -> data += when(val result = writeQuadWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
@@ -415,22 +442,24 @@ class ASMLoader(private val file: File){
                         if(rightOperand.lexeme !in labels){
                             return "Label ${rightOperand.lexeme} does not exists".right()
                         }
-                        bytes += labels[rightOperand.lexeme]!!.toUByte()
+                        data += labels[rightOperand.lexeme]!!.toUByte()
                     }
                 }
             }
             //TODO: See [parseRef]
-            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+            is Token.LBracketToken -> data += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
             is Token.IntegerLiteralToken, is Token.LongLiteralToken, is Token.ByteLiteralToken, is Token.ShortLiteralToken ->
-                bytes += when(val result = parseIntegerToBytes(rightOperand)){
+                data += when(val result = parseIntegerToBytes(rightOperand)){
                     is Either.Left -> result.a
                     is Either.Right -> return result
                 }
             else -> return "Expected either a memory address destination or REF".right()
         }
+        bytes += ubyteArrayOf(InstructionSet.ARGS.code, data.size.toUByte())
+        bytes += data
         return bytes.left()
     }
 
@@ -440,26 +469,27 @@ class ASMLoader(private val file: File){
             is Some -> next.t
         }
         var bytes = ubyteArrayOf(opcode.code)
+        var data = ubyteArrayOf()
         when(leftOperand){
             is Token.IdentifierToken -> {
                 val lexeme = leftOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> bytes += InstructionSet.TOP.code
+                    lexeme == "TOP" -> data += InstructionSet.TOP.code
                     lexeme.isSizeModifier -> {
                         when(lexeme){
-                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                            "BYTE" -> data += when(val result = writeByte(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                            "WORD" -> data += when(val result = writeWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                            "DWORD" -> data += when(val result = writeDoubleWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                            "QWORD" -> data += when(val result = writeQuadWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
@@ -467,18 +497,18 @@ class ASMLoader(private val file: File){
                                 if(leftOperand.lexeme !in labels){
                                     return "Label ${leftOperand.lexeme} does not exists".right()
                                 }
-                                bytes += labels[leftOperand.lexeme]!!.toUByte()
+                                data += labels[leftOperand.lexeme]!!.toUByte()
                             }
                         }
                     }
                 }
             }
-            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+            is Token.LBracketToken -> data += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
-            is Token.IntegerLiteralToken -> bytes += leftOperand.literal.toUByte()
-            is Token.ByteLiteralToken -> bytes += leftOperand.literal.toUByte() and 0xFF.toUByte()
+            is Token.IntegerLiteralToken -> data += leftOperand.literal.toUByte()
+            is Token.ByteLiteralToken -> data += leftOperand.literal.toUByte() and 0xFF.toUByte()
             else -> return "Expected either a memory address destination or REF".right()
         }
         when(val next = tokens.next()){
@@ -500,19 +530,19 @@ class ASMLoader(private val file: File){
                     lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
                     lexeme.isSizeModifier -> {
                         when(lexeme){
-                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                            "BYTE" -> data += when(val result = writeByte(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                            "WORD" -> data += when(val result = writeWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                            "DWORD" -> data += when(val result = writeDoubleWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                            "QWORD" -> data += when(val result = writeQuadWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
@@ -520,7 +550,7 @@ class ASMLoader(private val file: File){
                                 if(middleOperand.lexeme !in labels){
                                     return "Label ${middleOperand.lexeme} does not exists".right()
                                 }
-                                bytes += labels[middleOperand.lexeme]!!.toUByte()
+                                data += labels[middleOperand.lexeme]!!.toUByte()
                             }
                         }
                     }
@@ -528,12 +558,12 @@ class ASMLoader(private val file: File){
                 }
             }
             //TODO: See [parseRef]
-            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+            is Token.LBracketToken -> data += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
             is Token.IntegerLiteralToken, is Token.LongLiteralToken, is Token.ByteLiteralToken, is Token.ShortLiteralToken ->
-                bytes += when(val result = parseIntegerToBytes(middleOperand)){
+                data += when(val result = parseIntegerToBytes(middleOperand)){
                     is Either.Left -> result.a
                     is Either.Right -> return result
                 }
@@ -557,19 +587,19 @@ class ASMLoader(private val file: File){
                     lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
                     lexeme.isSizeModifier -> {
                         when(lexeme){
-                            "BYTE" -> bytes += when(val result = writeByte(tokens)){
+                            "BYTE" -> data += when(val result = writeByte(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "WORD" -> bytes += when(val result = writeWord(tokens)){
+                            "WORD" -> data += when(val result = writeWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "DWORD" -> bytes += when(val result = writeDoubleWord(tokens)){
+                            "DWORD" -> data += when(val result = writeDoubleWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
-                            "QWORD" -> bytes += when(val result = writeQuadWord(tokens)){
+                            "QWORD" -> data += when(val result = writeQuadWord(tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return result
                             }
@@ -579,22 +609,24 @@ class ASMLoader(private val file: File){
                         if(rightOperand.lexeme !in labels){
                             return "Label ${rightOperand.lexeme} does not exists".right()
                         }
-                        bytes += labels[rightOperand.lexeme]!!.toUByte()
+                        data += labels[rightOperand.lexeme]!!.toUByte()
                     }
                 }
             }
             //TODO: See [parseRef]
-            is Token.LBracketToken -> bytes += when(val result = parseRef(tokens)){
+            is Token.LBracketToken -> data += when(val result = parseRef(tokens)){
                 is Either.Left -> result.a
                 is Either.Right -> return result
             }
             is Token.IntegerLiteralToken, is Token.LongLiteralToken, is Token.ByteLiteralToken, is Token.ShortLiteralToken ->
-                bytes += when(val result = parseIntegerToBytes(middleOperand)){
+                data += when(val result = parseIntegerToBytes(middleOperand)){
                     is Either.Left -> result.a
                     is Either.Right -> return result
                 }
             else -> return "Expected either a memory address destination or REF".right()
         }
+        bytes += ubyteArrayOf(InstructionSet.ARGS.code, data.size.toUByte())
+        bytes += data
         return bytes.left()
     }
 
@@ -668,7 +700,7 @@ class ASMLoader(private val file: File){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }
-                            "POP" -> bytes += when(val result = parseUnary(InstructionSet.POP, tokens)){
+                            "POP" -> bytes += when(val result = parseUnaryOrNone(InstructionSet.POP, tokens)){
                                 is Either.Left -> result.a
                                 is Either.Right -> return createErrorMessage(ident.startPos, result.b).right()
                             }

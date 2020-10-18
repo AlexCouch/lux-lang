@@ -1,4 +1,5 @@
 import arrow.core.Either
+import arrow.core.Tuple2
 import java.io.File
 
 
@@ -223,37 +224,90 @@ class VM(val binary: Executable){
     val memory = Memory()
     val stack = Stack()
 
-    private fun reference(): DataType {
-        val next = binary.next()
-        val nextInstr = InstructionSet.values().find { it.code == next }
+    private fun reference(operandPtr: Int, operands: ArrayList<DataType.Byte>): Tuple2<DataType, Int> {
+        var localOperandPtr = operandPtr
+        val next = operands[localOperandPtr++]
+        val nextInstr = InstructionSet.values().find { it.code == next.data }
         return when{
             nextInstr != null -> {
-                val n = binary.next()
+                val n = operands[localOperandPtr++].data
                 val nInstr = InstructionSet.values().find { n == it.code }
                 if(nInstr != null){
                     when(nextInstr){
-                        InstructionSet.BYTE -> memory.readByte(binary.next())
-                        InstructionSet.WORD -> memory.readWord(binary.next())
-                        InstructionSet.DWORD -> memory.readDoubleWord(binary.next())
-                        InstructionSet.QWORD -> memory.readQuadWord(binary.next())
-                        else -> memory.readByte(next)
+                        InstructionSet.BYTE -> Tuple2(memory.readByte(operands[localOperandPtr++].data), localOperandPtr)
+                        InstructionSet.WORD -> Tuple2(memory.readWord(operands[localOperandPtr++].data), localOperandPtr)
+                        InstructionSet.DWORD -> Tuple2(memory.readDoubleWord(operands[localOperandPtr++].data), localOperandPtr)
+                        InstructionSet.QWORD -> Tuple2(memory.readQuadWord(operands[localOperandPtr++].data), localOperandPtr)
+                        else -> Tuple2(memory.readByte(next.data), localOperandPtr)
                     }
                 }else{
-                    memory.readByte(n)
+                    Tuple2(memory.readByte(n), localOperandPtr)
                 }
             }
-            else -> memory.readByte(next)
+            else -> Tuple2(memory.readByte(next.data), localOperandPtr)
         }
     }
 
+    private fun unaryOperatorOrNone(block: (operand: DataType) -> Unit){
+        val varOp = binary.nextByte()
+        if(varOp.data != InstructionSet.ARGS.code){
+            return
+        }
+        val numOperands = binary.nextByte()
+        val operands = arrayListOf<DataType.Byte>()
+        for(i in 1.toUByte() .. numOperands.data){
+            operands += binary.nextByte()
+        }
+        var operandPtr = 0
+        val operand = operands[operandPtr++]
+        val operandInstr = InstructionSet.values().find { it.code == operand.data }
+        if(operandInstr == InstructionSet.NOARGS){
+            return
+        }
+        val operandValue = if(operandInstr != null){
+            when(operandInstr){
+                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.REF -> {
+                    val (ref, ptr) = reference(operandPtr, operands)
+                    operandPtr = ptr
+                    if(ref !is DataType.Byte){
+                        println("Expected a destination of size byte but instead found size $ref")
+                        return
+                    }
+                    ref
+                }
+                InstructionSet.BYTE -> binary.nextByte()
+                InstructionSet.WORD -> binary.nextWord()
+                InstructionSet.DWORD -> binary.nextDoubleWord()
+                InstructionSet.QWORD -> binary.nextQuadWord()
+                else -> operand
+            }
+        }else{
+            operand
+        }
+        block(operandValue)
+    }
+
     private fun unaryOperator(block: (operand: DataType) -> Unit){
-        val operand = binary.nextByte()
+        val varOp = binary.nextByte()
+        if(varOp.data != InstructionSet.ARGS.code){
+            println("Expected a number of args to parse but instead found $varOp")
+            return
+        }
+        val numOperands = binary.nextByte()
+        val operands = arrayListOf<DataType.Byte>()
+        for(i in 1.toUByte() .. numOperands.data){
+            operands += binary.nextByte()
+        }
+        var operandPtr = 0
+        val operand = operands[operandPtr++]
         val operandInstr = InstructionSet.values().find { it.code == operand.data }
         val operandValue = if(operandInstr != null){
             when(operandInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    val ref = reference()
+                    val (ref, ptr) = reference(operandPtr, operands)
+                    operandPtr = ptr
                     if(ref !is DataType.Byte){
                         println("Expected a destination of size byte but instead found size $ref")
                         return
@@ -273,13 +327,25 @@ class VM(val binary: Executable){
     }
 
     fun binaryOperation(block: (left: DataType, right: DataType) -> Unit){
-        val left = binary.nextByte()
+        val varOp = binary.nextByte()
+        if(varOp.data != InstructionSet.ARGS.code){
+            println("Expected a number of args to parse but instead found $varOp")
+            return
+        }
+        val numOperands = binary.nextByte()
+        val operands = arrayListOf<DataType.Byte>()
+        for(i in 0.toUByte() until numOperands.data){
+            operands += binary.nextByte()
+        }
+        var operandPtr = 0
+        val left = operands[operandPtr++]
         val leftInstr = InstructionSet.values().find { it.code == left.data }
         val leftValue = if(leftInstr != null){
             when(leftInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    val ref = reference()
+                    val (ref, ptr) = reference(operandPtr, operands)
+                    operandPtr = ptr
                     if(ref !is DataType.Byte){
                         println("Expected a destination of size byte but instead found size $ref")
                         return
@@ -291,22 +357,58 @@ class VM(val binary: Executable){
         }else{
             left
         }
-        val right = binary.nextByte()
+        val right = operands[operandPtr++]
         val rightInstr = InstructionSet.values().find { it.code == right.data }
         val rightValue = if(rightInstr != null){
             when(rightInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    reference()
+                    val (ref, ptr) = reference(operandPtr, operands)
+                    operandPtr = ptr
+                    ref
                 }
-                InstructionSet.BYTE -> binary.nextByte()
-                InstructionSet.SBYTE -> binary.nextByte()
-                InstructionSet.WORD -> binary.nextWord()
-                InstructionSet.SWORD -> binary.nextWord()
-                InstructionSet.DWORD -> binary.nextDoubleWord()
-                InstructionSet.SDWORD -> binary.nextDoubleWord()
-                InstructionSet.QWORD -> binary.nextQuadWord()
-                InstructionSet.SQWORD -> binary.nextQuadWord()
+                InstructionSet.BYTE -> operands[operandPtr++]
+                InstructionSet.SBYTE -> operands[operandPtr++]
+                InstructionSet.WORD -> {
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                }
+                InstructionSet.SWORD -> {
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                }
+                InstructionSet.DWORD -> {
+                    DataType.DoubleWord(
+                        DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                        DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                    )
+                }
+                InstructionSet.SDWORD -> DataType.DoubleWord(
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                )
+                InstructionSet.QWORD -> {
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        )
+                    )
+                }
+                InstructionSet.SQWORD ->{
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        )
+                    )
+                }
                 else -> right
             }
         }else{
@@ -316,58 +418,141 @@ class VM(val binary: Executable){
     }
 
     fun trinaryOperation(block: (left: DataType, middle: DataType, right: DataType) -> Unit){
-        val left = binary.nextByte()
+        val varOp = binary.nextByte()
+        if(varOp.data != InstructionSet.ARGS.code){
+            println("Expected a number of args to parse but instead found $varOp")
+            return
+        }
+        var operandPtr = 0
+        val numOperands = binary.nextByte()
+        val operands = arrayListOf<DataType.Byte>()
+        for(i in 0.toUByte() until numOperands.data){
+            operands += binary.nextByte()
+        }
+        val left = operands[operandPtr++]
         val leftInstr = InstructionSet.values().find { it.code == left.data }
         val leftValue = if(leftInstr != null){
             when(leftInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    reference()
+                    val (ref, ptr) = reference(operandPtr, operands)
+                    operandPtr = ptr
+                    ref
                 }
                 else -> left
             }
         }else{
             left
         }
-        val middle = binary.nextByte()
+        val middle = operands[operandPtr++]
         val middleInstr = InstructionSet.values().find { it.code == middle.data }
         val middleValue = if(middleInstr != null){
             when(middleInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Byte){
-                        println("Expected a destination of size byte but instead found size $ref")
-                        return
-                    }
+                    val (ref, ptr) = reference(operandPtr, operands)
+                    operandPtr = ptr
                     ref
                 }
-                InstructionSet.BYTE -> binary.nextByte()
-                InstructionSet.WORD -> binary.nextWord()
-                InstructionSet.DWORD -> binary.nextDoubleWord()
-                InstructionSet.QWORD -> binary.nextQuadWord()
+                InstructionSet.BYTE -> operands[operandPtr++]
+                InstructionSet.SBYTE -> operands[operandPtr++]
+                InstructionSet.WORD -> {
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                }
+                InstructionSet.SWORD -> {
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                }
+                InstructionSet.DWORD -> {
+                    DataType.DoubleWord(
+                        DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                        DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                    )
+                }
+                InstructionSet.SDWORD -> DataType.DoubleWord(
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                )
+                InstructionSet.QWORD -> {
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        )
+                    )
+                }
+                InstructionSet.SQWORD ->{
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        )
+                    )
+                }
                 else -> middle
             }
         }else{
             middle
         }
-        val right = binary.nextByte()
+        val right = operands[operandPtr++]
         val rightInstr = InstructionSet.values().find { it.code == right.data }
         val rightValue = if(rightInstr != null){
             when(rightInstr){
                 InstructionSet.TOP -> DataType.Byte(stack.top)
                 InstructionSet.REF -> {
-                    val ref = reference()
-                    if(ref !is DataType.Byte){
-                        println("Expected a destination of size byte but instead found size $ref")
-                        return
-                    }
+                    val (ref, ptr) = reference(operandPtr, operands)
+                    operandPtr = ptr
                     ref
                 }
-                InstructionSet.BYTE -> binary.nextByte()
-                InstructionSet.WORD -> binary.nextWord()
-                InstructionSet.DWORD -> binary.nextDoubleWord()
-                InstructionSet.QWORD -> binary.nextQuadWord()
+                InstructionSet.BYTE -> operands[operandPtr++]
+                InstructionSet.SBYTE -> operands[operandPtr++]
+                InstructionSet.WORD -> {
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                }
+                InstructionSet.SWORD -> {
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                }
+                InstructionSet.DWORD -> {
+                    DataType.DoubleWord(
+                        DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                        DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                    )
+                }
+                InstructionSet.SDWORD -> DataType.DoubleWord(
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                )
+                InstructionSet.QWORD -> {
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        )
+                    )
+                }
+                InstructionSet.SQWORD ->{
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        )
+                    )
+                }
                 else -> right
             }
         }else{
@@ -448,10 +633,10 @@ class VM(val binary: Executable){
                 InstructionSet.PUSH -> unaryOperator{ operand ->
                     stack.push(operand)
                 }
-                InstructionSet.POP -> unaryOperator { operand ->
+                InstructionSet.POP -> unaryOperatorOrNone { operand ->
                     if(operand !is DataType.Byte){
                         println("Expected operand to be of size data but was instead $operand")
-                        return@unaryOperator
+                        return@unaryOperatorOrNone
                     }
                     memory.write(operand.data, DataType.Byte(stack.top))
                     stack.pop()

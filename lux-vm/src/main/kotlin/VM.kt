@@ -1,5 +1,6 @@
 import arrow.core.Either
 import arrow.core.Tuple2
+import arrow.core.left
 import java.io.File
 
 
@@ -238,6 +239,7 @@ class VM(val binary: Executable){
                         InstructionSet.WORD -> Tuple2(memory.readWord(operands[localOperandPtr++].data), localOperandPtr)
                         InstructionSet.DWORD -> Tuple2(memory.readDoubleWord(operands[localOperandPtr++].data), localOperandPtr)
                         InstructionSet.QWORD -> Tuple2(memory.readQuadWord(operands[localOperandPtr++].data), localOperandPtr)
+                        InstructionSet.TOP -> Tuple2(DataType.Byte(stack.top), localOperandPtr)
                         else -> Tuple2(memory.readByte(next.data), localOperandPtr)
                     }
                 }else{
@@ -246,6 +248,76 @@ class VM(val binary: Executable){
             }
             else -> Tuple2(memory.readByte(next.data), localOperandPtr)
         }
+    }
+
+    private fun offset(left: DataType, operandPtr: Int, operands: ArrayList<DataType.Byte>): Either<Tuple2<DataType, Int>, String> {
+        var ptr = operandPtr
+        val next = operands[ptr++]
+        val nextInst = InstructionSet.values().find { it.code == next.data }
+        val value = if(nextInst != null){
+            when(nextInst){
+                InstructionSet.BYTE -> operands[ptr++]
+                InstructionSet.WORD -> DataType.Word(operands[ptr++], operands[ptr++])
+                InstructionSet.DWORD ->
+                    DataType.DoubleWord(
+                        DataType.Word(operands[ptr++], operands[ptr++]),
+                        DataType.Word(operands[ptr++], operands[ptr++])
+                    )
+                InstructionSet.QWORD ->
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[ptr++], operands[ptr++]),
+                            DataType.Word(operands[ptr++], operands[ptr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[ptr++], operands[ptr++]),
+                            DataType.Word(operands[ptr++], operands[ptr++])
+                        )
+                    )
+                else -> next
+            }
+        }else{
+            next
+        }
+        return Tuple2(when(val result = left.plus(value)){
+            is Either.Left -> result.a
+            is Either.Right -> return result
+        }, ptr).left()
+    }
+
+    private fun noffset(left: DataType, operandPtr: Int, operands: ArrayList<DataType.Byte>): Either<Tuple2<DataType, Int>, String> {
+        var ptr = operandPtr
+        val next = operands[ptr++]
+        val nextInst = InstructionSet.values().find { it.code == next.data }
+        val value = if(nextInst != null){
+            when(nextInst){
+                InstructionSet.BYTE -> operands[ptr++]
+                InstructionSet.WORD -> DataType.Word(operands[ptr++], operands[ptr++])
+                InstructionSet.DWORD ->
+                    DataType.DoubleWord(
+                        DataType.Word(operands[ptr++], operands[ptr++]),
+                        DataType.Word(operands[ptr++], operands[ptr++])
+                    )
+                InstructionSet.QWORD ->
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[ptr++], operands[ptr++]),
+                            DataType.Word(operands[ptr++], operands[ptr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[ptr++], operands[ptr++]),
+                            DataType.Word(operands[ptr++], operands[ptr++])
+                        )
+                    )
+                else -> next
+            }
+        }else{
+            next
+        }
+        return Tuple2(when(val result = left.minus(value)){
+            is Either.Left -> result.a
+            is Either.Right -> return result
+        }, ptr).left()
     }
 
     private fun unaryOperatorOrNone(block: (operand: DataType) -> Unit){
@@ -314,14 +386,226 @@ class VM(val binary: Executable){
                     }
                     ref
                 }
-                InstructionSet.BYTE -> binary.nextByte()
-                InstructionSet.WORD -> binary.nextWord()
-                InstructionSet.DWORD -> binary.nextDoubleWord()
-                InstructionSet.QWORD -> binary.nextQuadWord()
-                else -> operand
+                InstructionSet.BYTE -> {
+                    val byte = operands[operandPtr++]
+                    if(operands.size <= operandPtr+1){
+                        byte
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(byte, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(byte, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> byte
+                            }
+                        } else {
+                            byte
+                        }
+                    }
+                }
+                InstructionSet.WORD -> {
+                    val word = DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                    val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                    if(peek != null){
+                        when(peek){
+                            InstructionSet.OFFSET -> {
+                                val (data, ptr) = when(val result = offset(word, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            InstructionSet.NOFFSET -> {
+                                val (data, ptr) = when(val result = noffset(word, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            else -> word
+                        }
+                    }else{
+                        word
+                    }
+                }
+                InstructionSet.DWORD -> {
+                    val word = DataType.DoubleWord(
+                        DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                        DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                    )
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, operandPtr++, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
+                }
+                InstructionSet.QWORD -> {
+                    val word = DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
+                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                        )
+                    )
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
+                }
+                else -> {
+                    val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                    if(peek != null){
+                        when(peek){
+                            InstructionSet.OFFSET -> {
+                                val (data, ptr) = when(val result = offset(operand, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            InstructionSet.NOFFSET -> {
+                                val (data, ptr) = when(val result = noffset(operand, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            else -> operand
+                        }
+                    }else{
+                        operand
+                    }
+                }
             }
         }else{
-            operand
+            val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+            if(peek != null){
+                when(peek){
+                    InstructionSet.OFFSET -> {
+                        val (data, ptr) = when(val result = offset(operand, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    InstructionSet.NOFFSET -> {
+                        val (data, ptr) = when(val result = noffset(operand, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    else -> operand
+                }
+            }else{
+                operand
+            }
         }
         block(operandValue)
     }
@@ -352,10 +636,70 @@ class VM(val binary: Executable){
                     }
                     ref
                 }
-                else -> left
+                else -> {
+                    val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                    if(peek != null){
+                        when(peek){
+                            InstructionSet.OFFSET -> {
+                                val (data, ptr) = when(val result = offset(left, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            InstructionSet.NOFFSET -> {
+                                val (data, ptr) = when(val result = noffset(left, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            else -> left
+                        }
+                    }else{
+                        left
+                    }
+                }
             }
         }else{
-            left
+            val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+            if(peek != null){
+                when(peek){
+                    InstructionSet.OFFSET -> {
+                        val (data, ptr) = when(val result = offset(left, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    InstructionSet.NOFFSET -> {
+                        val (data, ptr) = when(val result = noffset(left, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    else -> left
+                }
+            }else{
+                left
+            }
         }
         val right = operands[operandPtr++]
         val rightInstr = InstructionSet.values().find { it.code == right.data }
@@ -367,26 +711,122 @@ class VM(val binary: Executable){
                     operandPtr = ptr
                     ref
                 }
-                InstructionSet.BYTE -> operands[operandPtr++]
-                InstructionSet.SBYTE -> operands[operandPtr++]
-                InstructionSet.WORD -> {
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                InstructionSet.BYTE -> {
+                    val byte = operands[operandPtr++]
+                    if(operands.size <= operandPtr+1){
+                        byte
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(byte, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(byte, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> byte
+                            }
+                        } else {
+                            byte
+                        }
+                    }
                 }
-                InstructionSet.SWORD -> {
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                InstructionSet.WORD -> {
+                    val word = DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
                 InstructionSet.DWORD -> {
-                    DataType.DoubleWord(
+                    val word = DataType.DoubleWord(
                         DataType.Word(operands[operandPtr++], operands[operandPtr++]),
                         DataType.Word(operands[operandPtr++], operands[operandPtr++])
                     )
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
-                InstructionSet.SDWORD -> DataType.DoubleWord(
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                )
                 InstructionSet.QWORD -> {
-                    DataType.QuadWord(
+                    val word = DataType.QuadWord(
                         DataType.DoubleWord(
                             DataType.Word(operands[operandPtr++], operands[operandPtr++]),
                             DataType.Word(operands[operandPtr++], operands[operandPtr++])
@@ -396,18 +836,40 @@ class VM(val binary: Executable){
                             DataType.Word(operands[operandPtr++], operands[operandPtr++])
                         )
                     )
-                }
-                InstructionSet.SQWORD ->{
-                    DataType.QuadWord(
-                        DataType.DoubleWord(
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                        ),
-                        DataType.DoubleWord(
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                        )
-                    )
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
                 else -> right
             }
@@ -439,10 +901,70 @@ class VM(val binary: Executable){
                     operandPtr = ptr
                     ref
                 }
-                else -> left
+                else -> {
+                    val peek = InstructionSet.values().find { it.code == operands[operandPtr+1].data }
+                    if(peek != null){
+                        when(peek){
+                            InstructionSet.OFFSET -> {
+                                val (data, ptr) = when(val result = offset(left, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            InstructionSet.NOFFSET -> {
+                                val (data, ptr) = when(val result = noffset(left, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            else -> left
+                        }
+                    }else{
+                        left
+                    }
+                }
             }
         }else{
-            left
+            val peek = InstructionSet.values().find { it.code == operands[operandPtr+1].data }
+            if(peek != null){
+                when(peek){
+                    InstructionSet.OFFSET -> {
+                        val (data, ptr) = when(val result = offset(left, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    InstructionSet.NOFFSET -> {
+                        val (data, ptr) = when(val result = noffset(left, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    else -> left
+                }
+            }else{
+                left
+            }
         }
         val middle = operands[operandPtr++]
         val middleInstr = InstructionSet.values().find { it.code == middle.data }
@@ -454,26 +976,122 @@ class VM(val binary: Executable){
                     operandPtr = ptr
                     ref
                 }
-                InstructionSet.BYTE -> operands[operandPtr++]
-                InstructionSet.SBYTE -> operands[operandPtr++]
-                InstructionSet.WORD -> {
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                InstructionSet.BYTE -> {
+                    val byte = operands[operandPtr++]
+                    if(operands.size <= operandPtr+1){
+                        byte
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(byte, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(byte, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> byte
+                            }
+                        } else {
+                            byte
+                        }
+                    }
                 }
-                InstructionSet.SWORD -> {
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                InstructionSet.WORD -> {
+                    val word = DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
                 InstructionSet.DWORD -> {
-                    DataType.DoubleWord(
+                    val word = DataType.DoubleWord(
                         DataType.Word(operands[operandPtr++], operands[operandPtr++]),
                         DataType.Word(operands[operandPtr++], operands[operandPtr++])
                     )
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
-                InstructionSet.SDWORD -> DataType.DoubleWord(
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                )
                 InstructionSet.QWORD -> {
-                    DataType.QuadWord(
+                    val word = DataType.QuadWord(
                         DataType.DoubleWord(
                             DataType.Word(operands[operandPtr++], operands[operandPtr++]),
                             DataType.Word(operands[operandPtr++], operands[operandPtr++])
@@ -483,23 +1101,105 @@ class VM(val binary: Executable){
                             DataType.Word(operands[operandPtr++], operands[operandPtr++])
                         )
                     )
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
-                InstructionSet.SQWORD ->{
-                    DataType.QuadWord(
-                        DataType.DoubleWord(
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                        ),
-                        DataType.DoubleWord(
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                        )
-                    )
+                else -> {
+                    val peek = InstructionSet.values().find { it.code == operands[operandPtr+1].data }
+                    if(peek != null){
+                        when(peek){
+                            InstructionSet.OFFSET -> {
+                                val (data, ptr) = when(val result = offset(left, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            InstructionSet.NOFFSET -> {
+                                val (data, ptr) = when(val result = noffset(left, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            else -> middle
+                        }
+                    }else{
+                        middle
+                    }
                 }
-                else -> middle
             }
         }else{
-            middle
+            val peek = InstructionSet.values().find { it.code == operands[operandPtr+1].data }
+            if(peek != null){
+                when(peek){
+                    InstructionSet.OFFSET -> {
+                        val (data, ptr) = when(val result = offset(left, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    InstructionSet.NOFFSET -> {
+                        val (data, ptr) = when(val result = noffset(left, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    else -> middle
+                }
+            }else{
+                middle
+            }
         }
         val right = operands[operandPtr++]
         val rightInstr = InstructionSet.values().find { it.code == right.data }
@@ -511,52 +1211,218 @@ class VM(val binary: Executable){
                     operandPtr = ptr
                     ref
                 }
-                InstructionSet.BYTE -> operands[operandPtr++]
-                InstructionSet.SBYTE -> operands[operandPtr++]
-                InstructionSet.WORD -> {
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                InstructionSet.BYTE -> {
+                    val byte = operands[operandPtr++]
+                    if(operands.size <= operandPtr+1){
+                        byte
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr + 1].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(byte, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(byte, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> byte
+                            }
+                        } else {
+                            byte
+                        }
+                    }
                 }
-                InstructionSet.SWORD -> {
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
+                InstructionSet.WORD -> {
+                    val word = binary.nextWord()
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr + 1].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
                 InstructionSet.DWORD -> {
-                    DataType.DoubleWord(
-                        DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                        DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                    )
+                    val word = binary.nextDoubleWord()
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr + 1].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
-                InstructionSet.SDWORD -> DataType.DoubleWord(
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                    DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                )
                 InstructionSet.QWORD -> {
-                    DataType.QuadWord(
-                        DataType.DoubleWord(
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                        ),
-                        DataType.DoubleWord(
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                        )
-                    )
+                    val word = binary.nextQuadWord()
+                    if(operands.size <= operandPtr+1){
+                        word
+                    }else {
+                        val peek = InstructionSet.values().find { it.code == operands[operandPtr + 1].data }
+                        if (peek != null) {
+                            when (peek) {
+                                InstructionSet.OFFSET -> {
+                                    val (data, ptr) = when (val result = offset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                InstructionSet.NOFFSET -> {
+                                    val (data, ptr) = when (val result = noffset(word, ++operandPtr, operands)) {
+                                        is Either.Left -> result.a
+                                        is Either.Right -> {
+                                            println(result.b)
+                                            return
+                                        }
+                                    }
+                                    operandPtr = ptr
+                                    data
+                                }
+                                else -> word
+                            }
+                        } else {
+                            word
+                        }
+                    }
                 }
-                InstructionSet.SQWORD ->{
-                    DataType.QuadWord(
-                        DataType.DoubleWord(
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                        ),
-                        DataType.DoubleWord(
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++]),
-                            DataType.Word(operands[operandPtr++], operands[operandPtr++])
-                        )
-                    )
+                else -> {
+                    val peek = InstructionSet.values().find { it.code == operands[operandPtr+1].data }
+                    if(peek != null){
+                        when(peek){
+                            InstructionSet.OFFSET -> {
+                                val (data, ptr) = when(val result = offset(left, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            InstructionSet.NOFFSET -> {
+                                val (data, ptr) = when(val result = noffset(left, ++operandPtr, operands)){
+                                    is Either.Left -> result.a
+                                    is Either.Right -> {
+                                        println(result.b)
+                                        return
+                                    }
+                                }
+                                operandPtr = ptr
+                                data
+                            }
+                            else -> right
+                        }
+                    }else{
+                        right
+                    }
                 }
-                else -> right
             }
         }else{
-            right
+            val peek = InstructionSet.values().find { it.code == operands[operandPtr+1].data }
+            if(peek != null){
+                when(peek){
+                    InstructionSet.OFFSET -> {
+                        val (data, ptr) = when(val result = offset(left, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    InstructionSet.NOFFSET -> {
+                        val (data, ptr) = when(val result = noffset(left, ++operandPtr, operands)){
+                            is Either.Left -> result.a
+                            is Either.Right -> {
+                                println(result.b)
+                                return
+                            }
+                        }
+                        operandPtr = ptr
+                        data
+                    }
+                    else -> right
+                }
+            }else{
+                right
+            }
         }
         block(leftValue, middleValue, rightValue)
     }

@@ -1,0 +1,10 @@
+;Push 0x05 onto the stack (or whatever address we want to use
+;Then take whatever is on the top of the stack and use it to do a multiplication of that and 0x02
+;Effectively doubling what's on the top of the stack, then using it at as address
+push    0x05 + 0x02
+movb    [top], 0x0a
+pop
+
+push    0x05
+push    dword 0x0a
+movb    top-0x04, 0x15

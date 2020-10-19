@@ -45,9 +45,9 @@
 * [x] Add overflow logic to data arithmetics so that if a byte overflows then we reset that byte and flow into the next byte (words, dwords, qwords)
 * [x] Give `pop` an operand for location to pop off the stack to
 
-* [ ] Add variadic operands for certain operators, by implementing operand specifiers
-    - [ ] No operands
-    - [ ] ["num_operands"] [num] : If we specify "num_operands" specifier, then it must be followed up with a value
+* [x] Add variadic operands for certain operators, by implementing operand specifiers
+    - [x] No operands
+    - [x] ARGS [num_args] : If we specify ARGS specifier, then it must be followed up with a value
 * [ ] Add offsetting logic
     - Example:
       ```

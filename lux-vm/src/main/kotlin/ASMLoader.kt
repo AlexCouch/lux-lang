@@ -1,4 +1,5 @@
 import arrow.core.*
+import com.sun.org.apache.bcel.internal.generic.Instruction
 import java.io.File
 import kotlin.experimental.and
 
@@ -46,10 +47,32 @@ class ASMLoader(private val file: File){
      */
     private val labels = hashMapOf<String, Int>()
 
-    /*
-        TODO: Implement labels so that every time we process a label, we save it's place in the executable,
-         so that we can use it again later
-     */
+    private fun parseOffset(token: Token, tokens: TokenStream): Either<UByteArray, String>{
+        val next = when(val next = tokens.next()){
+            is None -> return "Expected an operand after REF instruction but instead found EOF".right()
+            is Some -> next.t
+        }
+        val opcode = when(token){
+            is Token.PlusToken -> InstructionSet.OFFSET.code
+            is Token.HyphenToken -> InstructionSet.NOFFSET.code
+            else -> return "Expected either a positive offset or a negative offset".right()
+        }
+        var bytes = ubyteArrayOf(opcode)
+        when(next){
+            is Token.IntegerLiteralToken, is Token.ByteLiteralToken, is Token.ShortLiteralToken, is Token.LongLiteralToken ->
+                bytes += when(val result = parseIntegerToBytes(next)){
+                    is Either.Left -> result.a
+                    is Either.Right -> return result
+                }
+            is Token.IdentifierToken -> bytes += when(val result = parseRef(tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+            else -> return "Invalid operand: $next".right()
+        }
+        return bytes.left()
+    }
+
     private fun parseRef(tokens: TokenStream): Either<UByteArray, String>{
         val next = when(val next = tokens.next()){
             is None -> return "Expected an operand after REF instruction but instead found EOF".right()
@@ -58,11 +81,21 @@ class ASMLoader(private val file: File){
         var bytes = ubyteArrayOf(InstructionSet.REF.code)
         when(next){
             is Token.ByteLiteralToken, is Token.ShortLiteralToken, is Token.IntegerLiteralToken, is Token.LongLiteralToken ->
+            {
                 bytes += when(val result = parseIntegerToBytes(next)){
                     is Either.Left -> result.a
                     is Either.Right -> return result
                 }
+                when{
+                    tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken || it is Token.StarToken } ->
+                        bytes += when(val result = parseOffset(next, tokens)){
+                            is Either.Left -> result.a
+                            is Either.Right -> return result
+                        }
+                }
+            }
             is Token.IdentifierToken -> when(next.lexeme.toUpperCase()){
+                "TOP" -> bytes += InstructionSet.TOP.code
                 "BYTE" -> {
                     bytes += InstructionSet.BYTE.code
                     bytes += when(val n = tokens.next()){
@@ -340,7 +373,13 @@ class ASMLoader(private val file: File){
                 data += labels[operand.lexeme]!!.toUByte()
             }
         }
-        bytes += ubyteArrayOf(InstructionSet.ARGS.code, (data.size.toUByte()-1u).toUByte())
+        if(tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken || it is Token.StarToken }){
+            data += when(val result = parseOffset(tokens.next().orNull()!!, tokens)){
+                is Either.Left -> result.a
+                is Either.Right -> return result
+            }
+        }
+        bytes += ubyteArrayOf(InstructionSet.ARGS.code, data.size.toUByte())
         bytes += data
         return bytes.left()
     }

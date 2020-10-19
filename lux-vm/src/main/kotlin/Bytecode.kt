@@ -322,5 +322,28 @@ enum class InstructionSet(val code: UByte){
      *  POP 0x05       => POP ARGS 1 0x05
      *
      */
-    ARGS(0x31u)
+    ARGS(0x31u),
+
+    /**
+     * This opcode is used to do address offsetting in the positive direction. In lasm, this would look like
+     *
+     * some_label: .ascii 'Hello, world!'
+     * mov 0x05, [some_label+5]             ;Move data at index 5 in ascii string 'some_label' into address 0x05, effectively moving character ',' into 0x05
+     *
+     * This turns into the bytecode
+     *
+     * MOV 0x05 0x00 OFFSET 0x05             ;The label some_label is at address 0 in the instruction, so the offset of some_label + 0x05 is just 0x05
+     */
+    OFFSET(0x32u),
+    /**
+     * This opcode is used to do address offsetting in the negative direction. In lasm, this would look like
+     * ...                                  ;Some other code here, let's say 20 other instructions, making some_label at index 21
+     * some_label: .ascii 'Hello, world!'
+     * mov 0x05, [some_label-5]             ;Move data at address 5 from the start of some_label into address 0x05, effectively moving character ',' into 0x05
+     *
+     * This turns into the bytecode
+     *
+     * MOV 0x05 0x15 NOFFSET 0x05           ;The label some_label is at address 0 in the instruction, so the offset of some_label - 0x05 is just 0x10 aka 16
+     */
+    NOFFSET(0x33u),
 }

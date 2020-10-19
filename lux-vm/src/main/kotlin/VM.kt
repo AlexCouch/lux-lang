@@ -159,6 +159,45 @@ class Stack{
             )
         }
 
+    fun readByte(from: DataType.Byte) =
+        if(from.data.toInt() >= stack.size){
+            DataType.Byte(0u)
+        }else{
+            DataType.Byte(stack[from.data.toInt()])
+        }
+
+    fun readWord(from: DataType.Byte) =
+        if(from.data.toInt() >= stack.size){
+            DataType.Word(DataType.Byte(0u), DataType.Byte(0u))
+        }else{
+            DataType.Word(DataType.Byte(stack[from.data.toInt()]), DataType.Byte(stack[from.data.toInt()+1]))
+        }
+
+    fun readDoubleWord(from: DataType.Byte) =
+        if(from.data.toInt() >= stack.size){
+            DataType.Word(DataType.Byte(0u), DataType.Byte(0u))
+        }else{
+            DataType.DoubleWord(
+                DataType.Word(DataType.Byte(stack[from.data.toInt()]), DataType.Byte(stack[from.data.toInt()+1])),
+                DataType.Word(DataType.Byte(stack[from.data.toInt()+2]), DataType.Byte(stack[from.data.toInt()+3]))
+            )
+        }
+
+    fun readQuadWord(from: DataType.Byte) =
+        if(from.data.toInt() >= stack.size){
+            DataType.Word(DataType.Byte(0u), DataType.Byte(0u))
+        }else{
+            DataType.QuadWord(
+                DataType.DoubleWord(
+                    DataType.Word(DataType.Byte(stack[from.data.toInt()]), DataType.Byte(stack[from.data.toInt()+1])),
+                    DataType.Word(DataType.Byte(stack[from.data.toInt()+2]), DataType.Byte(stack[from.data.toInt()+3]))
+                ),
+                DataType.DoubleWord(
+                    DataType.Word(DataType.Byte(stack[from.data.toInt()+4]), DataType.Byte(stack[from.data.toInt()+5])),
+                    DataType.Word(DataType.Byte(stack[from.data.toInt()+6]), DataType.Byte(stack[from.data.toInt()+7]))
+                )
+            )
+        }
 
     fun push(data: DataType){
         when(data){
@@ -195,6 +234,17 @@ class Stack{
     fun pop(){
         stack[--stackPtr] = 0.toUByte()
     }
+
+    @ExperimentalStdlibApi
+    override fun toString(): String =
+        buildPrettyString {
+            for((i, b) in stack.iterator().withIndex()){
+                append("$i: ")
+                indent {
+                    appendWithNewLine("$b")
+                }
+            }
+        }
 
 }
 
@@ -1836,7 +1886,7 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     if(stackFlag){
-                        stack.write(left, rData)
+                        stack.write(left, stack.readByte(rData))
                     }else{
                         memory.writeByte(left.data, rData)
                     }
@@ -1852,7 +1902,7 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     if(stackFlag){
-                        stack.write(left, rData)
+                        stack.write(left, stack.readWord(rData.data2))
                     }else{
                         memory.writeWord(left.data, rData)
                     }
@@ -1868,7 +1918,7 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     if(stackFlag){
-                        stack.write(left, rData)
+                        stack.write(left, stack.readDoubleWord(rData.data2.data2))
                     }else{
                         memory.writeDouble(left.data, rData)
                     }
@@ -1884,7 +1934,7 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
                     if(stackFlag){
-                        stack.write(left, rData)
+                        stack.write(left, stack.readQuadWord(rData.data2.data2.data2))
                     }else{
                         memory.writeQuad(left.data, rData)
                     }
@@ -2392,6 +2442,8 @@ class VM(val binary: Executable){
                 }
             }
         }
+        println(stack)
+        println(memory)
     }
 }
 

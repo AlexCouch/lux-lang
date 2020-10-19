@@ -1,6 +1,8 @@
 import arrow.core.Either
 import arrow.core.Tuple2
 import arrow.core.left
+import arrow.core.right
+import com.sun.org.apache.xpath.internal.operations.Bool
 import java.io.File
 
 
@@ -94,7 +96,8 @@ class Stack{
         return true
     }
 
-    private var stackPtr = 0
+    var stackPtr = 0
+        private set
 
     val top: UByte
         get() = if(stackPtr == 0) 0.toUByte() else stack[stackPtr - 1]
@@ -102,6 +105,60 @@ class Stack{
     override fun hashCode(): Int {
         return stack.contentHashCode()
     }
+
+    fun write(to: DataType.Byte, data: DataType) {
+        if (to.data.toInt() < stack.size) {
+            when (data) {
+                is DataType.Byte -> stack[to.data.toInt()] = data.data
+                is DataType.SignedByte -> stack[to.data.toInt()] = data.data.toUByte()
+                is DataType.Word -> {
+                    stack[to.data.toInt()] = data.data1.data
+                    stack[to.data.toInt() + 1] = data.data2.data
+                }
+                is DataType.DoubleWord -> {
+                    stack[to.data.toInt()] = data.data1.data1.data
+                    stack[to.data.toInt() + 1] = data.data1.data2.data
+                    stack[to.data.toInt() + 2] = data.data2.data1.data
+                    stack[to.data.toInt() + 3] = data.data2.data2.data
+                }
+                is DataType.QuadWord -> {
+                    stack[to.data.toInt()] = data.data1.data1.data1.data
+                    stack[to.data.toInt() + 1] = data.data1.data1.data2.data
+                    stack[to.data.toInt() + 2] = data.data1.data2.data1.data
+                    stack[to.data.toInt() + 3] = data.data1.data2.data2.data
+                    stack[to.data.toInt() + 4] = data.data2.data1.data1.data
+                    stack[to.data.toInt() + 5] = data.data2.data1.data2.data
+                    stack[to.data.toInt() + 6] = data.data2.data2.data1.data
+                    stack[to.data.toInt() + 7] = data.data2.data2.data2.data
+                }
+            }
+        }else{
+            println("Attempted to write to invalid stack address: $to")
+            return
+        }
+    }
+
+    fun read(from: DataType) =
+        when(from){
+            is DataType.Byte -> DataType.Byte(stack[from.data.toInt()])
+            is DataType.SignedByte -> DataType.SignedByte(stack[from.data.toInt()].toByte())
+            is DataType.Word -> DataType.Word(DataType.Byte(stack[from.data1.data.toInt()]), DataType.Byte(stack[from.data2.data.toInt()]))
+            is DataType.DoubleWord -> DataType.DoubleWord(
+                DataType.Word(DataType.Byte(stack[from.data1.data1.data.toInt()]), DataType.Byte(stack[from.data1.data2.data.toInt()])),
+                DataType.Word(DataType.Byte(stack[from.data2.data2.data.toInt()]), DataType.Byte(stack[from.data2.data2.data.toInt()]))
+            )
+            is DataType.QuadWord -> DataType.QuadWord(
+                DataType.DoubleWord(
+                    DataType.Word(DataType.Byte(stack[from.data1.data1.data1.data.toInt()]), DataType.Byte(stack[from.data1.data1.data2.data.toInt()])),
+                    DataType.Word(DataType.Byte(stack[from.data1.data2.data1.data.toInt()]), DataType.Byte(stack[from.data1.data2.data2.data.toInt()]))
+                ),
+                DataType.DoubleWord(
+                    DataType.Word(DataType.Byte(stack[from.data2.data1.data1.data.toInt()]), DataType.Byte(stack[from.data2.data1.data2.data.toInt()])),
+                    DataType.Word(DataType.Byte(stack[from.data2.data2.data1.data.toInt()]), DataType.Byte(stack[from.data2.data2.data2.data.toInt()]))
+                )
+            )
+        }
+
 
     fun push(data: DataType){
         when(data){
@@ -225,7 +282,7 @@ class VM(val binary: Executable){
     val memory = Memory()
     val stack = Stack()
 
-    private fun reference(operandPtr: Int, operands: ArrayList<DataType.Byte>): Tuple2<DataType, Int> {
+    private fun reference(operandPtr: Int, operands: ArrayList<DataType.Byte>): Either<Tuple2<DataType, Int>, String> {
         var localOperandPtr = operandPtr
         val next = operands[localOperandPtr++]
         val nextInstr = InstructionSet.values().find { it.code == next.data }
@@ -235,19 +292,101 @@ class VM(val binary: Executable){
                 val nInstr = InstructionSet.values().find { n == it.code }
                 if(nInstr != null){
                     when(nextInstr){
-                        InstructionSet.BYTE -> Tuple2(memory.readByte(operands[localOperandPtr++].data), localOperandPtr)
-                        InstructionSet.WORD -> Tuple2(memory.readWord(operands[localOperandPtr++].data), localOperandPtr)
-                        InstructionSet.DWORD -> Tuple2(memory.readDoubleWord(operands[localOperandPtr++].data), localOperandPtr)
-                        InstructionSet.QWORD -> Tuple2(memory.readQuadWord(operands[localOperandPtr++].data), localOperandPtr)
-                        InstructionSet.TOP -> Tuple2(DataType.Byte(stack.top), localOperandPtr)
-                        else -> Tuple2(memory.readByte(next.data), localOperandPtr)
+                        InstructionSet.BYTE -> Tuple2(memory.readByte(operands[localOperandPtr++].data), localOperandPtr).left()
+                        InstructionSet.WORD -> Tuple2(memory.readWord(operands[localOperandPtr++].data), localOperandPtr).left()
+                        InstructionSet.DWORD -> Tuple2(memory.readDoubleWord(operands[localOperandPtr++].data), localOperandPtr).left()
+                        InstructionSet.QWORD -> Tuple2(memory.readQuadWord(operands[localOperandPtr++].data), localOperandPtr).left()
+                        InstructionSet.TOP -> {
+                            if(InstructionSet.values().any { it.code == operands[localOperandPtr].data }){
+                                when(InstructionSet.values().find { it.code == operands[localOperandPtr].data }!!){
+                                    InstructionSet.OFFSET -> {
+                                        val offset = when(val result = offsetFromTop(operandPtr, operands)){
+                                            is Either.Left -> result.a
+                                            is Either.Right -> return result.b.right()
+                                        }
+                                    }
+                                }
+                            }
+                            Tuple2(DataType.Byte(stack.top), localOperandPtr).left()
+                        }
+                        else -> Tuple2(memory.readByte(next.data), localOperandPtr).left()
                     }
                 }else{
-                    Tuple2(memory.readByte(n), localOperandPtr)
+                    Tuple2(memory.readByte(n), localOperandPtr).left()
                 }
             }
-            else -> Tuple2(memory.readByte(next.data), localOperandPtr)
+            else -> Tuple2(memory.readByte(next.data), localOperandPtr).left()
         }
+    }
+
+    private fun offsetFromTop(operandPtr: Int, operands: ArrayList<DataType.Byte>): Either<Tuple2<DataType, Int>, String> {
+        var ptr = operandPtr
+        val next = operands[ptr++]
+        val nextInst = InstructionSet.values().find { it.code == next.data }
+        val value = if(nextInst != null){
+            when(nextInst){
+                InstructionSet.BYTE -> operands[ptr++]
+                InstructionSet.WORD -> DataType.Word(operands[ptr++], operands[ptr++])
+                InstructionSet.DWORD ->
+                    DataType.DoubleWord(
+                        DataType.Word(operands[ptr++], operands[ptr++]),
+                        DataType.Word(operands[ptr++], operands[ptr++])
+                    )
+                InstructionSet.QWORD ->
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[ptr++], operands[ptr++]),
+                            DataType.Word(operands[ptr++], operands[ptr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[ptr++], operands[ptr++]),
+                            DataType.Word(operands[ptr++], operands[ptr++])
+                        )
+                    )
+                else -> next
+            }
+        }else{
+            next
+        }
+        return Tuple2(when(val result = DataType.Byte(stack.stackPtr.toUByte()).plus(value)){
+            is Either.Left -> result.a
+            is Either.Right -> return result
+        }, ptr).left()
+    }
+
+    private fun noffsetFromTop(operandPtr: Int, operands: ArrayList<DataType.Byte>): Either<Tuple2<DataType, Int>, String> {
+        var ptr = operandPtr
+        val next = operands[ptr++]
+        val nextInst = InstructionSet.values().find { it.code == next.data }
+        val value = if(nextInst != null){
+            when(nextInst){
+                InstructionSet.BYTE -> operands[ptr++]
+                InstructionSet.WORD -> DataType.Word(operands[ptr++], operands[ptr++])
+                InstructionSet.DWORD ->
+                    DataType.DoubleWord(
+                        DataType.Word(operands[ptr++], operands[ptr++]),
+                        DataType.Word(operands[ptr++], operands[ptr++])
+                    )
+                InstructionSet.QWORD ->
+                    DataType.QuadWord(
+                        DataType.DoubleWord(
+                            DataType.Word(operands[ptr++], operands[ptr++]),
+                            DataType.Word(operands[ptr++], operands[ptr++])
+                        ),
+                        DataType.DoubleWord(
+                            DataType.Word(operands[ptr++], operands[ptr++]),
+                            DataType.Word(operands[ptr++], operands[ptr++])
+                        )
+                    )
+                else -> next
+            }
+        }else{
+            next
+        }
+        return Tuple2(when(val result = DataType.Byte(stack.stackPtr.toUByte()).minus(value)){
+            is Either.Left -> result.a
+            is Either.Right -> return result
+        }, ptr).left()
     }
 
     private fun offset(left: DataType, operandPtr: Int, operands: ArrayList<DataType.Byte>): Either<Tuple2<DataType, Int>, String> {
@@ -338,9 +477,42 @@ class VM(val binary: Executable){
         }
         val operandValue = if(operandInstr != null){
             when(operandInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.TOP -> {
+                    val peek = operands[operandPtr]
+                    val peekInstr = InstructionSet.values().find { it.code == peek.data }
+                    val addr = if(peekInstr != null){
+                        val (data, ptr) = when(peekInstr){
+                            InstructionSet.OFFSET -> when(val result = offsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            InstructionSet.NOFFSET -> when(val result = noffsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            else -> Tuple2(DataType.Byte(stack.top), operandPtr)
+                        }
+                        operandPtr = ptr
+                        data
+                    }else{
+                        DataType.Byte(stack.top)
+                    }
+                    addr
+                }
                 InstructionSet.REF -> {
-                    val (ref, ptr) = reference(operandPtr, operands)
+                    val (ref, ptr) = when(val result = reference(operandPtr, operands)){
+                        is Either.Left -> result.a
+                        is Either.Right -> {
+                            println(result.b)
+                            return
+                        }
+                    }
                     operandPtr = ptr
                     if(ref !is DataType.Byte){
                         println("Expected a destination of size byte but instead found size $ref")
@@ -376,9 +548,42 @@ class VM(val binary: Executable){
         val operandInstr = InstructionSet.values().find { it.code == operand.data }
         val operandValue = if(operandInstr != null){
             when(operandInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.TOP -> {
+                    val peek = operands[operandPtr]
+                    val peekInstr = InstructionSet.values().find { it.code == peek.data }
+                    val addr = if(peekInstr != null){
+                        val (data, ptr) = when(peekInstr){
+                            InstructionSet.OFFSET -> when(val result = offsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            InstructionSet.NOFFSET -> when(val result = noffsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            else -> Tuple2(DataType.Byte(stack.top), operandPtr)
+                        }
+                        operandPtr = ptr
+                        data
+                    }else{
+                        DataType.Byte(stack.top)
+                    }
+                    addr
+                }
                 InstructionSet.REF -> {
-                    val (ref, ptr) = reference(operandPtr, operands)
+                    val (ref, ptr) = when(val result = reference(operandPtr, operands)){
+                        is Either.Left -> result.a
+                        is Either.Right -> {
+                            println(result.b)
+                            return
+                        }
+                    }
                     operandPtr = ptr
                     if(ref !is DataType.Byte){
                         println("Expected a destination of size byte but instead found size $ref")
@@ -610,7 +815,8 @@ class VM(val binary: Executable){
         block(operandValue)
     }
 
-    fun binaryOperation(block: (left: DataType, right: DataType) -> Unit){
+    fun binaryOperation(block: (left: DataType, right: DataType, stack: Boolean) -> Unit){
+        var stackFlag = false
         val varOp = binary.nextByte()
         if(varOp.data != InstructionSet.ARGS.code){
             println("Expected a number of args to parse but instead found $varOp")
@@ -626,9 +832,43 @@ class VM(val binary: Executable){
         val leftInstr = InstructionSet.values().find { it.code == left.data }
         val leftValue = if(leftInstr != null){
             when(leftInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.TOP -> {
+                    stackFlag = true
+                    val peek = operands[operandPtr]
+                    val peekInstr = InstructionSet.values().find { it.code == peek.data }
+                    val addr = if(peekInstr != null){
+                        val (data, ptr) = when(peekInstr){
+                            InstructionSet.OFFSET -> when(val result = offsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            InstructionSet.NOFFSET -> when(val result = noffsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            else -> Tuple2(DataType.Byte(stack.top), operandPtr)
+                        }
+                        operandPtr = ptr
+                        data
+                    }else{
+                        DataType.Byte(stack.top)
+                    }
+                    addr
+                }
                 InstructionSet.REF -> {
-                    val (ref, ptr) = reference(operandPtr, operands)
+                    val (ref, ptr) = when(val result = reference(operandPtr, operands)){
+                        is Either.Left -> result.a
+                        is Either.Right -> {
+                            println(result.b)
+                            return
+                        }
+                    }
                     operandPtr = ptr
                     if(ref !is DataType.Byte){
                         println("Expected a destination of size byte but instead found size $ref")
@@ -705,9 +945,42 @@ class VM(val binary: Executable){
         val rightInstr = InstructionSet.values().find { it.code == right.data }
         val rightValue = if(rightInstr != null){
             when(rightInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.TOP -> {
+                    val peek = operands[operandPtr]
+                    val peekInstr = InstructionSet.values().find { it.code == peek.data }
+                    val addr = if(peekInstr != null){
+                        val (data, ptr) = when(peekInstr){
+                            InstructionSet.OFFSET -> when(val result = offsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            InstructionSet.NOFFSET -> when(val result = noffsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            else -> Tuple2(DataType.Byte(stack.top), operandPtr)
+                        }
+                        operandPtr = ptr
+                        data
+                    }else{
+                        DataType.Byte(stack.top)
+                    }
+                    addr
+                }
                 InstructionSet.REF -> {
-                    val (ref, ptr) = reference(operandPtr, operands)
+                    val (ref, ptr) = when(val result = reference(operandPtr, operands)){
+                        is Either.Left -> result.a
+                        is Either.Right -> {
+                            println(result.b)
+                            return
+                        }
+                    }
                     operandPtr = ptr
                     ref
                 }
@@ -876,7 +1149,7 @@ class VM(val binary: Executable){
         }else{
             right
         }
-        block(leftValue, rightValue)
+        block(leftValue, rightValue, stackFlag)
     }
 
     fun trinaryOperation(block: (left: DataType, middle: DataType, right: DataType) -> Unit){
@@ -895,9 +1168,42 @@ class VM(val binary: Executable){
         val leftInstr = InstructionSet.values().find { it.code == left.data }
         val leftValue = if(leftInstr != null){
             when(leftInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.TOP -> {
+                    val peek = operands[operandPtr]
+                    val peekInstr = InstructionSet.values().find { it.code == peek.data }
+                    val addr = if(peekInstr != null){
+                        val (data, ptr) = when(peekInstr){
+                            InstructionSet.OFFSET -> when(val result = offsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            InstructionSet.NOFFSET -> when(val result = noffsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            else -> Tuple2(DataType.Byte(stack.top), operandPtr)
+                        }
+                        operandPtr = ptr
+                        data
+                    }else{
+                        DataType.Byte(stack.top)
+                    }
+                    addr
+                }
                 InstructionSet.REF -> {
-                    val (ref, ptr) = reference(operandPtr, operands)
+                    val (ref, ptr) = when(val result = reference(operandPtr, operands)){
+                        is Either.Left -> result.a
+                        is Either.Right -> {
+                            println(result.b)
+                            return
+                        }
+                    }
                     operandPtr = ptr
                     ref
                 }
@@ -970,9 +1276,42 @@ class VM(val binary: Executable){
         val middleInstr = InstructionSet.values().find { it.code == middle.data }
         val middleValue = if(middleInstr != null){
             when(middleInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.TOP -> {
+                    val peek = operands[operandPtr]
+                    val peekInstr = InstructionSet.values().find { it.code == peek.data }
+                    val addr = if(peekInstr != null){
+                        val (data, ptr) = when(peekInstr){
+                            InstructionSet.OFFSET -> when(val result = offsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            InstructionSet.NOFFSET -> when(val result = noffsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            else -> Tuple2(DataType.Byte(stack.top), operandPtr)
+                        }
+                        operandPtr = ptr
+                        data
+                    }else{
+                        DataType.Byte(stack.top)
+                    }
+                    addr
+                }
                 InstructionSet.REF -> {
-                    val (ref, ptr) = reference(operandPtr, operands)
+                    val (ref, ptr) = when(val result = reference(operandPtr, operands)){
+                        is Either.Left -> result.a
+                        is Either.Right -> {
+                            println(result.b)
+                            return
+                        }
+                    }
                     operandPtr = ptr
                     ref
                 }
@@ -1205,9 +1544,42 @@ class VM(val binary: Executable){
         val rightInstr = InstructionSet.values().find { it.code == right.data }
         val rightValue = if(rightInstr != null){
             when(rightInstr){
-                InstructionSet.TOP -> DataType.Byte(stack.top)
+                InstructionSet.TOP -> {
+                    val peek = operands[operandPtr]
+                    val peekInstr = InstructionSet.values().find { it.code == peek.data }
+                    val addr = if(peekInstr != null){
+                        val (data, ptr) = when(peekInstr){
+                            InstructionSet.OFFSET -> when(val result = offsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            InstructionSet.NOFFSET -> when(val result = noffsetFromTop(++operandPtr, operands)){
+                                is Either.Left -> result.a
+                                is Either.Right -> {
+                                    println(result.b)
+                                    return
+                                }
+                            }
+                            else -> Tuple2(DataType.Byte(stack.top), operandPtr)
+                        }
+                        operandPtr = ptr
+                        data
+                    }else{
+                        DataType.Byte(stack.top)
+                    }
+                    addr
+                }
                 InstructionSet.REF -> {
-                    val (ref, ptr) = reference(operandPtr, operands)
+                    val (ref, ptr) = when(val result = reference(operandPtr, operands)){
+                        is Either.Left -> result.a
+                        is Either.Right -> {
+                            println(result.b)
+                            return
+                        }
+                    }
                     operandPtr = ptr
                     ref
                 }
@@ -1436,7 +1808,7 @@ class VM(val binary: Executable){
                 return
             }
             when(instr){
-                InstructionSet.MOVE -> binaryOperation { left, right ->
+                InstructionSet.MOVE -> binaryOperation { left, right, stackFlag ->
                     if(right !is DataType.Byte){
                         println("Expected a data type of byte for right operand but instead got $right")
                         return@binaryOperation
@@ -1446,9 +1818,14 @@ class VM(val binary: Executable){
                         return@binaryOperation
                     }
 
-                    memory.writeByte(left.data, memory.readByte(right.data))
+                    if(stackFlag){
+                        stack.write(left, memory.readByte(right.data))
+                    }else{
+                        memory.writeByte(left.data, memory.readByte(right.data))
+                    }
+
                 }
-                InstructionSet.MOVB -> binaryOperation { left, right ->
+                InstructionSet.MOVB -> binaryOperation { left, right, stackFlag ->
                     val rData = if(right !is DataType.Byte){
                         right.toByte()
                     }else{
@@ -1458,9 +1835,13 @@ class VM(val binary: Executable){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
-                    memory.writeByte(left.data, rData)
+                    if(stackFlag){
+                        stack.write(left, rData)
+                    }else{
+                        memory.writeByte(left.data, rData)
+                    }
                 }
-                InstructionSet.MOVW -> binaryOperation{ left, right ->
+                InstructionSet.MOVW -> binaryOperation{ left, right, stackFlag ->
                     val rData = if(right !is DataType.Word){
                         right.toWord()
                     }else{
@@ -1470,9 +1851,13 @@ class VM(val binary: Executable){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
-                    memory.writeWord(left.data, rData)
+                    if(stackFlag){
+                        stack.write(left, rData)
+                    }else{
+                        memory.writeWord(left.data, rData)
+                    }
                 }
-                InstructionSet.MOVD -> binaryOperation{ left, right ->
+                InstructionSet.MOVD -> binaryOperation{ left, right, stackFlag ->
                     val rData = if(right !is DataType.DoubleWord){
                         right.toDouble()
                     }else{
@@ -1482,9 +1867,13 @@ class VM(val binary: Executable){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
-                    memory.writeDouble(left.data, rData)
+                    if(stackFlag){
+                        stack.write(left, rData)
+                    }else{
+                        memory.writeDouble(left.data, rData)
+                    }
                 }
-                InstructionSet.MOVQ -> binaryOperation{ left, right ->
+                InstructionSet.MOVQ -> binaryOperation{ left, right, stackFlag ->
                     val rData = if(right !is DataType.QuadWord){
                         right.toQuad()
                     }else{
@@ -1494,7 +1883,11 @@ class VM(val binary: Executable){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
                     }
-                    memory.writeQuad(left.data, rData)
+                    if(stackFlag){
+                        stack.write(left, rData)
+                    }else{
+                        memory.writeQuad(left.data, rData)
+                    }
                 }
                 InstructionSet.PUSH -> unaryOperator{ operand ->
                     stack.push(operand)
@@ -1514,7 +1907,7 @@ class VM(val binary: Executable){
                     }
                     binary.instructionPtr = operand.data.toInt()
                 }
-                InstructionSet.ADD -> binaryOperation{ left, right ->
+                InstructionSet.ADD -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
@@ -1527,14 +1920,18 @@ class VM(val binary: Executable){
                         is DataType.QuadWord -> memory.readQuadWord(left.data).plus(right)
                     }
                     when(sum){
-                        is Either.Left -> memory.write(left.data, sum.a)
+                        is Either.Left -> if(stackFlag){
+                            stack.write(left, sum.a)
+                        }else{
+                            memory.write(left.data, sum.a)
+                        }
                         is Either.Right -> {
                             println(sum.b)
                             return@binaryOperation
                         }
                     }
                 }
-                InstructionSet.SADD -> binaryOperation{ left, right ->
+                InstructionSet.SADD -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
@@ -1547,14 +1944,18 @@ class VM(val binary: Executable){
                         is DataType.QuadWord -> memory.readQuadWord(left.data).plus(right)
                     }
                     when(sum){
-                        is Either.Left -> memory.write(left.data, sum.a)
+                        is Either.Left -> if(stackFlag){
+                            stack.write(left, sum.a)
+                        }else{
+                            memory.write(left.data, sum.a)
+                        }
                         is Either.Right -> {
                             println(sum.b)
                             return@binaryOperation
                         }
                     }
                 }
-                InstructionSet.SUB -> binaryOperation{ left, right ->
+                InstructionSet.SUB -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
@@ -1567,14 +1968,18 @@ class VM(val binary: Executable){
                         is DataType.QuadWord -> memory.readQuadWord(left.data).minus(right)
                     }
                     when(diff){
-                        is Either.Left -> memory.write(left.data, diff.a)
+                        is Either.Left -> if(stackFlag){
+                            stack.write(left, diff.a)
+                        }else{
+                            memory.write(left.data, diff.a)
+                        }
                         is Either.Right -> {
                             println(diff.b)
                             return@binaryOperation
                         }
                     }
                 }
-                InstructionSet.SSUB -> binaryOperation{ left, right ->
+                InstructionSet.SSUB -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
@@ -1587,14 +1992,18 @@ class VM(val binary: Executable){
                         is DataType.QuadWord -> memory.readQuadWord(left.data).minus(right)
                     }
                     when(diff){
-                        is Either.Left -> memory.write(left.data, diff.a)
+                        is Either.Left -> if(stackFlag){
+                            stack.write(left, diff.a)
+                        }else{
+                            memory.write(left.data, diff.a)
+                        }
                         is Either.Right -> {
                             println(diff.b)
                             return@binaryOperation
                         }
                     }
                 }
-                InstructionSet.MUL -> binaryOperation{ left, right ->
+                InstructionSet.MUL -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
@@ -1607,14 +2016,18 @@ class VM(val binary: Executable){
                         is DataType.QuadWord -> memory.readQuadWord(left.data).times(right)
                     }
                     when(product){
-                        is Either.Left -> memory.write(left.data, product.a)
+                        is Either.Left -> if(stackFlag){
+                            stack.write(left, product.a)
+                        }else{
+                            memory.write(left.data, product.a)
+                        }
                         is Either.Right -> {
                             println(product.b)
                             return@binaryOperation
                         }
                     }
                 }
-                InstructionSet.SMUL -> binaryOperation{ left, right ->
+                InstructionSet.SMUL -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
@@ -1627,14 +2040,18 @@ class VM(val binary: Executable){
                         is DataType.QuadWord -> memory.readQuadWord(left.data).times(right)
                     }
                     when(product){
-                        is Either.Left -> memory.write(left.data, product.a)
+                        is Either.Left -> if(stackFlag){
+                            stack.write(left, product.a)
+                        }else{
+                            memory.write(left.data, product.a)
+                        }
                         is Either.Right -> {
                             println(product.b)
                             return@binaryOperation
                         }
                     }
                 }
-                InstructionSet.DIV -> binaryOperation{ left, right ->
+                InstructionSet.DIV -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
@@ -1647,14 +2064,18 @@ class VM(val binary: Executable){
                         is DataType.QuadWord -> memory.readQuadWord(left.data).div(right)
                     }
                     when(quotient){
-                        is Either.Left -> memory.write(left.data, quotient.a)
+                        is Either.Left -> if(stackFlag){
+                            stack.write(left, quotient.a)
+                        }else{
+                            memory.write(left.data, quotient.a)
+                        }
                         is Either.Right -> {
                             println(quotient.b)
                             return@binaryOperation
                         }
                     }
                 }
-                InstructionSet.SDIV -> binaryOperation{ left, right ->
+                InstructionSet.SDIV -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a data type of byte for left operand but instead got $right")
                         return@binaryOperation
@@ -1667,26 +2088,30 @@ class VM(val binary: Executable){
                         is DataType.QuadWord -> memory.readQuadWord(left.data).div(right)
                     }
                     when(quotient){
-                        is Either.Left -> memory.write(left.data, quotient.a)
+                        is Either.Left -> if(stackFlag){
+                            stack.write(left, quotient.a)
+                        }else{
+                            memory.write(left.data, quotient.a)
+                        }
                         is Either.Right -> {
                             println(quotient.b)
                             return@binaryOperation
                         }
                     }
                 }
-                InstructionSet.LE -> binaryOperation{ left, right ->
+                InstructionSet.LE -> binaryOperation{ left, right, _ ->
                     val cmp = left <= right
                     stack.push(DataType.Byte(if(cmp) 1.toUByte() else 0.toUByte()))
                 }
-                InstructionSet.LT -> binaryOperation{ left, right ->
+                InstructionSet.LT -> binaryOperation{ left, right, _ ->
                     val cmp = left < right
                     stack.push(DataType.Byte(if(cmp) 1.toUByte() else 0.toUByte()))
                 }
-                InstructionSet.GE -> binaryOperation{ left, right ->
+                InstructionSet.GE -> binaryOperation{ left, right, _ ->
                     val cmp = left >= right
                     stack.push(DataType.Byte(if(cmp) 1.toUByte() else 0.toUByte()))
                 }
-                InstructionSet.GT -> binaryOperation{ left, right ->
+                InstructionSet.GT -> binaryOperation{ left, right, _ ->
                     val cmp = left > right
                     stack.push(DataType.Byte(if(cmp) 1.toUByte() else 0.toUByte()))
                 }
@@ -1745,7 +2170,7 @@ class VM(val binary: Executable){
                     }
                     binary.instructionPtr = right.data.toInt()
                 }
-                InstructionSet.AND -> binaryOperation{ left, right ->
+                InstructionSet.AND -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a destination of size byte but instead found $left")
                         return@binaryOperation
@@ -1753,23 +2178,39 @@ class VM(val binary: Executable){
                     when(right){
                         is DataType.Byte -> {
                             val result = memory.readByte(left.data) and right
-                            memory.writeByte(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.Word -> {
                             val result = memory.readWord(left.data) and right
-                            memory.writeWord(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.DoubleWord -> {
                             val result = memory.readDoubleWord(left.data) and right
-                            memory.writeDouble(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.QuadWord -> {
                             val result = memory.readQuadWord(left.data) and right
-                            memory.writeQuad(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                     }
                 }
-                InstructionSet.OR -> binaryOperation{ left, right ->
+                InstructionSet.OR -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a destination of size byte but instead found $left")
                         return@binaryOperation
@@ -1777,23 +2218,39 @@ class VM(val binary: Executable){
                     when(right){
                         is DataType.Byte -> {
                             val result = memory.readByte(left.data) or right
-                            memory.writeByte(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.Word -> {
                             val result = memory.readWord(left.data) or right
-                            memory.writeWord(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.DoubleWord -> {
                             val result = memory.readDoubleWord(left.data) or right
-                            memory.writeDouble(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.QuadWord -> {
                             val result = memory.readQuadWord(left.data) or right
-                            memory.writeQuad(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                     }
                 }
-                InstructionSet.XOR -> binaryOperation{ left, right ->
+                InstructionSet.XOR -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a destination of size byte but instead found $left")
                         return@binaryOperation
@@ -1801,23 +2258,39 @@ class VM(val binary: Executable){
                     when(right){
                         is DataType.Byte -> {
                             val result = memory.readByte(left.data) xor right
-                            memory.writeByte(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.Word -> {
                             val result = memory.readWord(left.data) xor right
-                            memory.writeWord(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.DoubleWord -> {
                             val result = memory.readDoubleWord(left.data) xor right
-                            memory.writeDouble(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.QuadWord -> {
                             val result = memory.readQuadWord(left.data) xor right
-                            memory.writeQuad(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                     }
                 }
-                InstructionSet.SHR -> binaryOperation{ left, right ->
+                InstructionSet.SHR -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a destination of size byte but instead found $left")
                         return@binaryOperation
@@ -1825,23 +2298,39 @@ class VM(val binary: Executable){
                     when(right){
                         is DataType.Byte -> {
                             val result = memory.readByte(left.data) shr right
-                            memory.writeByte(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.Word -> {
                             val result = memory.readWord(left.data) shr right
-                            memory.writeWord(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.DoubleWord -> {
                             val result = memory.readDoubleWord(left.data) shr right
-                            memory.writeDouble(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.QuadWord -> {
                             val result = memory.readQuadWord(left.data) shr right
-                            memory.writeQuad(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                     }
                 }
-                InstructionSet.SHL -> binaryOperation{ left, right ->
+                InstructionSet.SHL -> binaryOperation{ left, right, stackFlag ->
                     if(left !is DataType.Byte){
                         println("Expected a destination of size byte but instead found $left")
                         return@binaryOperation
@@ -1849,19 +2338,35 @@ class VM(val binary: Executable){
                     when(right){
                         is DataType.Byte -> {
                             val result = memory.readByte(left.data) shl right
-                            memory.writeByte(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.Word -> {
                             val result = memory.readWord(left.data) shl right
-                            memory.writeWord(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.DoubleWord -> {
                             val result = memory.readDoubleWord(left.data) shl right
-                            memory.writeDouble(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                         is DataType.QuadWord -> {
                             val result = memory.readQuadWord(left.data) shl right
-                            memory.writeQuad(left.data, result)
+                            if(stackFlag){
+                                stack.write(left, result)
+                            }else{
+                                memory.write(left.data, result)
+                            }
                         }
                     }
                 }

@@ -95,7 +95,15 @@ class ASMLoader(private val file: File){
                 }
             }
             is Token.IdentifierToken -> when(next.lexeme.toUpperCase()){
-                "TOP" -> bytes += InstructionSet.TOP.code
+                "TOP" -> {
+                    bytes += InstructionSet.TOP.code
+                    if(tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken }){
+                        bytes += when(val result = parseOffset(tokens.next().orNull()!!, tokens)){
+                            is Either.Left -> result.a
+                            is Either.Right -> return result
+                        }
+                    }
+                }
                 "BYTE" -> {
                     bytes += InstructionSet.BYTE.code
                     bytes += when(val n = tokens.next()){
@@ -368,9 +376,28 @@ class ASMLoader(private val file: File){
             }
             is Token.IdentifierToken -> {
                 if(operand.lexeme !in labels){
-                    return "Label ${operand.lexeme} does not exists".right()
+                    when(operand.lexeme.toUpperCase()){
+                        "BYTE" -> data += when(val result = writeByte(tokens)){
+                            is Either.Left -> result.a
+                            is Either.Right -> return result.b.right()
+                        }
+                        "WORD" -> data += when(val result = writeWord(tokens)){
+                            is Either.Left -> result.a
+                            is Either.Right -> return result.b.right()
+                        }
+                        "DWORD" -> data += when(val result = writeDoubleWord(tokens)){
+                            is Either.Left -> result.a
+                            is Either.Right -> return result.b.right()
+                        }
+                        "QWORD" -> data += when(val result = writeQuadWord(tokens)){
+                            is Either.Left -> result.a
+                            is Either.Right -> return result.b.right()
+                        }
+                        else -> return "Label ${operand.lexeme} does not exists".right()
+                    }
+                }else{
+                    data += labels[operand.lexeme]!!.toUByte()
                 }
-                data += labels[operand.lexeme]!!.toUByte()
             }
         }
         if(tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken || it is Token.StarToken }){
@@ -395,7 +422,15 @@ class ASMLoader(private val file: File){
             is Token.IdentifierToken -> {
                 val lexeme = leftOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> data += InstructionSet.TOP.code
+                    lexeme == "TOP" -> {
+                        data += InstructionSet.TOP.code
+                        if(tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken }){
+                            data += when(val result = parseOffset(tokens.next().orNull()!!, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
                     lexeme.isSizeModifier -> {
                         when(lexeme){
                             "BYTE" -> data += when(val result = writeByte(tokens)){
@@ -452,7 +487,15 @@ class ASMLoader(private val file: File){
             is Token.IdentifierToken -> {
                 val lexeme = rightOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> data += InstructionSet.TOP.code
+                    lexeme == "TOP" -> {
+                        data += InstructionSet.TOP.code
+                        if(tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken }){
+                            data += when(val result = parseOffset(tokens.next().orNull()!!, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
                     lexeme.isSizeModifier -> {
                         when(lexeme){
                             "BYTE" -> data += when(val result = writeByte(tokens)){
@@ -513,7 +556,15 @@ class ASMLoader(private val file: File){
             is Token.IdentifierToken -> {
                 val lexeme = leftOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> data += InstructionSet.TOP.code
+                    lexeme == "TOP" -> {
+                        data += InstructionSet.TOP.code
+                        if(tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken }){
+                            data += when(val result = parseOffset(tokens.next().orNull()!!, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
                     lexeme.isSizeModifier -> {
                         when(lexeme){
                             "BYTE" -> data += when(val result = writeByte(tokens)){
@@ -566,7 +617,15 @@ class ASMLoader(private val file: File){
             is Token.IdentifierToken -> {
                 val lexeme = middleOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme == "TOP" -> {
+                        data += InstructionSet.TOP.code
+                        if(tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken }){
+                            data += when(val result = parseOffset(tokens.next().orNull()!!, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
                     lexeme.isSizeModifier -> {
                         when(lexeme){
                             "BYTE" -> data += when(val result = writeByte(tokens)){
@@ -623,7 +682,15 @@ class ASMLoader(private val file: File){
             is Token.IdentifierToken -> {
                 val lexeme = rightOperand.lexeme.toUpperCase()
                 when{
-                    lexeme == "TOP" -> return "TOP is not a valid destination. Use PUSH instead!".right()
+                    lexeme == "TOP" ->{
+                        data += InstructionSet.TOP.code
+                        if(tokens.peek.exists { it is Token.PlusToken || it is Token.HyphenToken }){
+                            data += when(val result = parseOffset(tokens.next().orNull()!!, tokens)){
+                                is Either.Left -> result.a
+                                is Either.Right -> return result
+                            }
+                        }
+                    }
                     lexeme.isSizeModifier -> {
                         when(lexeme){
                             "BYTE" -> data += when(val result = writeByte(tokens)){

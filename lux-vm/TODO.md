@@ -48,12 +48,12 @@
 * [x] Add variadic operands for certain operators, by implementing operand specifiers
     - [x] No operands
     - [x] ARGS [num_args] : If we specify ARGS specifier, then it must be followed up with a value
-* [ ] Add offsetting logic
+* [x] Add offsetting logic
     - Example:
       ```
-        mov     0x05 + 0x05, [0x0a + 0x05] ;Mov whatever is in the address pointed to in 0x0a + 0x05 (0x0f) into 0x05 + 0x05 (0x0a)
-        mov     0x15 - 0x04, 0x35          ;Mov 0x35 into 0x15 - 0x04 (0x11)
-        mov     0x05 * 3 - 4, 0x35         ;Mov 0x35 into 0x05 * 3 (0x0f) - 4 (0x0b)
+        push    0x05
+        push    dword 0x0a
+        movb    top-0x04, 0x15
       ```
 * [ ] Floating point integers and arithmetic
     - Add instructions for moving a floating point integer into memory addresses

@@ -55,6 +55,9 @@
         push    dword 0x0a
         movb    top-0x04, 0x15
       ```
+* [ ] Rewrite VM to have a better architecture so that interpreting bytecode is easier to expand
+    - Right now, it's all crammed into a single file, and it needs to be separated the same way that the lux-lang parser is.
+    - Same thing needs to be applied to the ASMLoader
 * [ ] Floating point integers and arithmetic
     - Add instructions for moving a floating point integer into memory addresses
     - Add instructions for doing arithmetic with floating points

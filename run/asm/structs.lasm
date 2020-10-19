@@ -1,0 +1,34 @@
+;Here we are creating a data structure equivalent to the following C code
+;struct myStruct{
+;   int num;
+;   otherStruct* other;
+;   bool flag;
+;}
+;struct otherStruct{
+;   int num;
+;}
+;With the following init procedure
+;myStruct initMyStruct(int num, bool flag){
+;   myStruct my_struct;
+;   my_struct.num = num;
+;   my_struct.flag = flag;
+;   return my_struct;
+;}
+;myStruct my_struct = initMyStruct(5, true);
+;my_struct.other = malloc(sizeof(otherStruct))
+;my_struct.other->num = 10;
+
+start:
+    push    dword 0x05      ;Push 4 bytes of data 0x05
+    push    0x01            ;Push 1 byte of data 1
+    ;Initialize the empty data structure
+    push    dword 0x00  ;Initialize an empty integer, of size dword, 0 by default
+    push    0x00        ;Initialize an empty pointer to otherStruct, null by default
+    push    0x00        ;Initialize an empty boolean flag, false by default
+
+    movd    top-0x06, top-0x0b  ;Take the integer parameter for the procedure, which is the top of the stack offset 5 bytes (the bool + the int) at the beginning of the procedure (ignoring the return address)
+    movd    top, top-0x07       ;Take the bool parameter for the procedure, which is the top of the stack at the beginning of the procedure (ignoring the return address)
+
+    movd    0x00, 0x0a
+    movb    top-0x02, 0x00
+    
